@@ -68,6 +68,14 @@ const Home = () => {
 const SocketContext = React.createContext()
 export const useSocket = () => useContext(SocketContext)
 
+const getSocketPath = () => {
+  const port = Number(process.env.PORT || 8080)
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+  const host = window.location.hostname
+  const socketPath = `${protocol}//${host}:${port}`
+  return socketPath
+}
+
 const InitializeSocket = () => {
   const { roomId } = useParams()
   const [socket, setSocket] = useState(undefined)
@@ -84,8 +92,8 @@ const InitializeSocket = () => {
           event === "getRoom" ? deserialize(args) : args
         )
       }
-      const newSocket = io({
-        rejectUnauthorized: false,
+
+      const newSocket = io(getSocketPath(), {
         auth: { name, userId },
         query: { roomId }
       })

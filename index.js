@@ -24,8 +24,8 @@ app.set("port", port)
 
 var server = http.createServer(app)
 var io = socketio(server, {
-  pingTimeout: 60000,
-  maxHttpBufferSize: 1e8,
+  // pingTimeout: 60000,
+  // maxHttpBufferSize: 1e8,
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
