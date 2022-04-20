@@ -1,0 +1,28 @@
+{
+  "name": "chat-server",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently 'nodemon index.js' 'cd chat-client && yarn && yarn start'",
+    "start": "node index.js",
+    "build": "cd chat-client && yarn && yarn build",
+    "deploy": "fly deploy --remote-only --no-cache"
+  },
+  "dependencies": {
+    "babel-eslint": "^10.1.0",
+    "concurrently": "^7.1.0",
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "debug": "~2.6.9",
+    "easytimer.js": "^4.5.3",
+    "eslint": "^8.13.0",
+    "express": "~4.16.1",
+    "morgan": "~1.9.1",
+    "nanoid": "^3.3.2",
+    "nodemon": "^2.0.15",
+    "rimraf": "^3.0.2",
+    "serialize-javascript": "^6.0.0",
+    "socket.io": "^4.4.1"
+  }
+}
