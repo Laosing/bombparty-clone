@@ -85,6 +85,7 @@ const InitializeSocket = () => {
         )
       }
       const newSocket = io(`http://${window.location.hostname}:8080`, {
+        rejectUnauthorized: false,
         auth: { name, userId },
         query: { roomId }
       })
