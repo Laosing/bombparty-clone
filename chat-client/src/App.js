@@ -84,7 +84,7 @@ const InitializeSocket = () => {
           event === "getRoom" ? deserialize(args) : args
         )
       }
-      const newSocket = io(`http://${window.location.hostname}:8080`, {
+      const newSocket = io(`${window.location.origin}:8080`, {
         rejectUnauthorized: false,
         auth: { name, userId },
         query: { roomId }
