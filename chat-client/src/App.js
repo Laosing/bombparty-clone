@@ -296,9 +296,7 @@ function PlayerInput() {
 
   const submitForm = (e) => {
     e.preventDefault()
-    if (value.length >= 3) {
-      socket.emit("checkWord", value)
-    }
+    socket.emit("checkWord", value)
     e.target.reset()
   }
 

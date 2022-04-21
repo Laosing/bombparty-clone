@@ -68,8 +68,9 @@ function connection(io, socket) {
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = dictionary[value]
     const isUnique = !words.has(value)
+    const isLongEnough = value.length >= 3
 
-    if (isBlend && isDictionary && isUnique) {
+    if (isBlend && isDictionary && isUnique && isLongEnough) {
       console.log(`valid word: ${value}`)
       io.sockets.in(roomId).emit("wordValidation", "valid")
       words.add(value)
