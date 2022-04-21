@@ -35,22 +35,41 @@ const getRandomName = () =>
     length: 2
   })
 
-// const name = prompt("name?") || randomName
-// const name = randomName
+const randomName = getRandomName()
+console.log({ randomName })
 
-function App() {
-  const [name] = useLocalStorage("name", getRandomName())
-  useLocalStorage("userId", nanoid())
+function Header() {
+  const { socket } = useSocket()
+
+  const [name, setName] = useLocalStorage("name", randomName)
+  const [id] = useLocalStorage("userId")
+  const editName = () => {
+    const newName = window.prompt("name:") || ""
+    if (newName.trim()) {
+      setName(newName)
+      socket.emit("updateName", newName, id)
+    }
+  }
 
   return (
-    <div className="App">
-      <header className="app-header">Current user: {name}</header>
+    <div>
+      <span>Current user: {name}</span>{" "}
+      <button onClick={editName}>Edit name</button>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <div>
       <Outlet />
     </div>
   )
 }
 
 const Router = () => {
+  useLocalStorage("userId", nanoid())
+
   return (
     <BrowserRouter>
       <Routes>
@@ -70,21 +89,10 @@ const Home = () => {
 const SocketContext = React.createContext()
 export const useSocket = () => useContext(SocketContext)
 
-const getSocketPath = () => {
-  const port =
-    process.env.NODE_ENV === "development"
-      ? Number(process.env.PORT || 8080)
-      : ""
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const host = window.location.hostname
-  const socketPath = `${protocol}//${host}${port ? ":" + port : ""}`
-  return socketPath
-}
-
 const InitializeSocket = () => {
   const { roomId } = useParams()
   const [socket, setSocket] = useState(undefined)
-  const [name] = useLocalStorage("name")
+  const [name] = useLocalStorage("name", randomName)
   const [userId] = useLocalStorage("userId")
   const hasSocket = socket?.id
 
@@ -102,8 +110,6 @@ const InitializeSocket = () => {
       const props = isDevEnv
         ? [`http://${window.location.hostname}:8080`, params]
         : [params]
-
-      console.log(props)
 
       const newSocket = io(...props)
       setSocket(newSocket)
@@ -167,11 +173,16 @@ function Room() {
 
   return (
     <div>
-      <Link to="/">Leave room</Link> Current room: {roomId}
-      <div className="chat-container">
+      <div style={{ marginBottom: "5rem" }}>
+        <Header />
+        <Link to="/">Leave room</Link> Current room: {roomId}
+      </div>
+      <div style={{ marginBottom: "5rem" }}>
+        <Game />
+      </div>
+      <div>
         <Messages />
         <MessageInput />
-        <Game />
       </div>
     </div>
   )
@@ -198,8 +209,10 @@ function Game() {
 
   return (
     <>
-      <div style={{ marginTop: "5rem" }}>
-        <button onClick={toggleGame}>{running ? "stop" : "start"}</button>
+      <div>
+        <button onClick={toggleGame} style={{ marginBottom: "3rem" }}>
+          {running ? "stop" : "start"}
+        </button>
         {running && (
           <>
             <div>{letterBlend?.toUpperCase()}</div>
@@ -228,7 +241,7 @@ function PlayerInput() {
   const [value, setValue] = useState("")
 
   const currentPlayer = room.get("currentPlayer") === userId
-  // console.log()
+
   const submitForm = (e) => {
     e.preventDefault()
     if (value.length >= 3) {
@@ -247,24 +260,33 @@ function PlayerInput() {
     <>
       {currentPlayer && (
         <form onSubmit={submitForm}>
-          <input
-            autoFocus
-            placeholder="Type your message"
-            onChange={(e) => debounced(e.target.value)}
-          />
+          <input autoFocus onChange={(e) => debounced(e.target.value)} />
         </form>
       )}
     </>
   )
 }
 
-// function Room
-
 function Players() {
+  const { socket } = useSocket()
   const { room } = useRoom()
   const players = room.get("users")
   const running = room.get("running")
   const currentPlayer = room.get("currentPlayer")
+
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const triggerError = (val) => {
+      setError(val)
+      setTimeout(() => setError(""), 200)
+    }
+
+    socket.on("wordError", triggerError)
+    return () => {
+      socket.off("wordError", triggerError)
+    }
+  }, [socket])
 
   return (
     <div>
@@ -273,12 +295,13 @@ function Players() {
         <div key={key}>
           <span
             style={{
+              color: key === currentPlayer && error ? "red" : "initial",
               display: "inline-block",
               marginRight: "1rem",
               fontWeight: key === currentPlayer ? "bold" : "initial"
             }}
           >
-            {value?.name} {running ? value?.lives : ""}
+            {value?.name} {running ? new Array(value?.lives).fill("❤") : ""}
           </span>
           <span>{value?.text}</span>
         </div>

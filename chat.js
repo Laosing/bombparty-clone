@@ -43,6 +43,7 @@ function connection(io, socket) {
   socket.on("stopGame", () => stopGame())
   socket.on("switchPlayer", () => switchPlayer())
   socket.on("getRoom", () => relayRoom())
+  socket.on("updateName", (value, userId) => updateName(value, userId))
   socket.on("message", (value) => handleMessage(value))
   socket.on("disconnect", (reason) => disconnect(reason))
   socket.on("connect_error", (err) => {
@@ -54,8 +55,16 @@ function connection(io, socket) {
     io.sockets.in(roomId).emit("getRoom", serialize(room))
   }
 
+  function updateName(value, userId) {
+    if (!value) return
+    const { users } = getRoom()
+    const player = users.get(userId)
+    users.set(userId, { ...player, name: value })
+    relayRoom()
+  }
+
   function checkWord(value) {
-    const { room, letterBlend, words } = getRoom()
+    const { roomId, room, letterBlend, words } = getRoom()
 
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = dictionary[value]
@@ -69,6 +78,7 @@ function connection(io, socket) {
       switchPlayer()
     } else {
       console.log(`invalid word: ${value}`)
+      io.sockets.in(roomId).emit("wordError", value)
       setPlayerText("", false)
     }
     relayRoom()
