@@ -27,16 +27,15 @@ const rooms = new Map()
 function connection(io, socket) {
   const { roomId } = socket.handshake.query
 
-  const initialTimer = 10
-  const initialLives = 2
-
   socket.join(roomId)
 
   getRoom()
   // handleMessage("joined the room!")
 
   initializeUser()
+  setSettings()
 
+  socket.on("setSettings", (value) => setSettings(JSON.parse(value)))
   socket.on("checkWord", (value) => checkWord(value))
   socket.on("setPlayerText", (value) => setPlayerText(value))
   socket.on("startGame", () => startGame())
@@ -72,13 +71,14 @@ function connection(io, socket) {
 
     if (isBlend && isDictionary && isUnique) {
       console.log(`valid word: ${value}`)
+      io.sockets.in(roomId).emit("wordValidation", "valid")
       words.add(value)
       room.set("letterBlend", getRandomLetters())
       timer.reset()
       switchPlayer()
     } else {
       console.log(`invalid word: ${value}`)
-      io.sockets.in(roomId).emit("wordError", value)
+      io.sockets.in(roomId).emit("wordValidation", "invalid")
       setPlayerText("", false)
     }
     relayRoom()
@@ -96,8 +96,10 @@ function connection(io, socket) {
   function loseLife() {
     const { users, currentPlayer } = getRoom()
     const player = users.get(currentPlayer)
-    const lives = player.lives > 0 ? player.lives - 1 : 0
-    users.set(currentPlayer, { ...player, lives })
+    if (player) {
+      const lives = player.lives > 0 ? player.lives - 1 : 0
+      users.set(currentPlayer, { ...player, lives })
+    }
   }
 
   function setPlayerText(text, relay = true) {
@@ -128,18 +130,20 @@ function connection(io, socket) {
   }
 
   function startGame() {
-    const { room } = getRoom()
+    const { room, settings } = getRoom()
+    const startTimer = settings.get("timer")
     room.set("running", true)
     room.set("letterBlend", getRandomLetters())
     room.set("words", new Set())
     resetUserLives()
     switchPlayer()
 
+    timer.start({ startValues: { seconds: startTimer } })
+
     timer.on("started", updateTimer)
     timer.on("reset", updateTimer)
     timer.on("secondsUpdated", updateSecondsTimer)
 
-    timer.start({ startValues: { seconds: initialTimer } })
     relayRoom()
   }
 
@@ -159,31 +163,31 @@ function connection(io, socket) {
   function stopGame(player) {
     const { room } = getRoom()
     timer.reset()
-    timer.pause()
+    timer.stop()
     timer.removeAllEventListeners()
     room.set("winner", player)
     room.set("running", false)
     room.set("currentPlayer", "")
     room.set("letterBlend", "")
-    room.set("timer", "")
     resetUserText()
     relayRoom()
   }
 
   function resetUserLives() {
-    const { room, users } = getRoom()
-    const newUsers = Array.from(users, ([key, value]) => {
-      return [key, { ...value, lives: initialLives }]
+    const { room, users, settings } = getRoom()
+    const lives = settings.get("lives")
+    const updatedUsers = Array.from(users, ([key, value]) => {
+      return [key, { ...value, lives }]
     })
-    room.set("users", new Map(newUsers))
+    room.set("users", new Map(updatedUsers))
   }
 
   function resetUserText() {
     const { room, users } = getRoom()
-    const newUsers = Array.from(users, ([key, value]) => {
+    const updatedUsers = Array.from(users, ([key, value]) => {
       return [key, { ...value, text: "" }]
     })
-    room.set("users", new Map(newUsers))
+    room.set("users", new Map(updatedUsers))
   }
 
   function getNextPlayer(collection) {
@@ -221,7 +225,8 @@ function connection(io, socket) {
       timer: setProp(room, "timer", ""),
       currentPlayer: setProp(room, "currentPlayer", ""),
       running: setProp(room, "running", false),
-      winner: setProp(room, "winner", null)
+      winner: setProp(room, "winner", null),
+      settings: setProp(room, "settings", new Map())
     }
 
     return { room, roomId, ...props }
@@ -231,6 +236,17 @@ function connection(io, socket) {
     const { name, userId } = socket.handshake.auth
     const { users } = getRoom()
     users.set(userId, { id: userId, name })
+  }
+
+  function setSettings(data) {
+    const _timer = data?.timer || 10
+    const _lives = data?.lives || 2
+
+    const { settings, room } = getRoom()
+    room.set("timer", Number(_timer))
+    settings.set("timer", Number(_timer))
+    settings.set("lives", _lives)
+    data && relayRoom()
   }
 
   function handleMessage(value) {

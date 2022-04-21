@@ -1,13 +1,32 @@
 import React from "react"
-import { useRoom } from "App"
+import { useRoom, useSocket } from "App"
+
+export function MessagesWrapper() {
+  return (
+    <div
+      style={{
+        textAlign: "left",
+        border: "1px solid black",
+        maxWidth: "400px",
+        margin: "auto"
+      }}
+    >
+      <Messages />
+      <MessageInput />
+    </div>
+  )
+}
 
 function Messages() {
   const { room } = useRoom()
   const messages = room.get("messages")
 
+  const roomMessages = [...messages]
+
   return (
-    <div style={{ textAlign: "left" }}>
-      {[...messages]
+    <div style={{ padding: "1rem" }}>
+      <h4 style={{ margin: 0 }}>chat box</h4>
+      {roomMessages
         .sort((a, b) => a.time - b.time)
         .map((message) => (
           <div
@@ -27,4 +46,31 @@ function Messages() {
   )
 }
 
-export default Messages
+const MessageInput = () => {
+  const inputRef = React.useRef()
+  const { socket } = useSocket()
+
+  const submitForm = (e) => {
+    e.preventDefault()
+    const value = inputRef.current.value.toLowerCase().trim()
+    if (value) {
+      socket.emit("message", value)
+    }
+    e.target.reset()
+  }
+
+  return (
+    <form onSubmit={submitForm}>
+      <input
+        style={{
+          width: "100%",
+          border: 0,
+          borderTop: "1px solid black",
+          padding: "1rem"
+        }}
+        ref={inputRef}
+        placeholder="Type your message"
+      />
+    </form>
+  )
+}

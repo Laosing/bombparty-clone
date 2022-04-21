@@ -1,7 +1,5 @@
 import React, { useContext, useEffect, useState } from "react"
 import io from "socket.io-client"
-import Messages from "components/Messages"
-import MessageInput from "components/MessageInput"
 
 import "./App.css"
 import {
@@ -23,6 +21,7 @@ import { customAlphabet, nanoid } from "nanoid"
 import { deserialize } from "functions/deserialize"
 import { useLocalStorage } from "functions/hooks"
 import { useDebouncedCallback } from "use-debounce"
+import { MessagesWrapper } from "components/Messages"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -36,11 +35,9 @@ const getRandomName = () =>
   })
 
 const randomName = getRandomName()
-console.log({ randomName })
 
 function Header() {
   const { socket } = useSocket()
-
   const [name, setName] = useLocalStorage("name", randomName)
   const [id] = useLocalStorage("userId")
   const editName = () => {
@@ -54,7 +51,7 @@ function Header() {
   return (
     <div>
       <span>Current user: {name}</span>{" "}
-      <button onClick={editName}>Edit name</button>
+      <button onClick={editName}>change name</button>
     </div>
   )
 }
@@ -176,15 +173,70 @@ function Room() {
       <div style={{ marginBottom: "5rem" }}>
         <Header />
         <Link to="/">Leave room</Link> Current room: {roomId}
+        <GameSettings />
       </div>
       <div style={{ marginBottom: "5rem" }}>
         <Game />
       </div>
       <div>
-        <Messages />
-        <MessageInput />
+        <MessagesWrapper />
       </div>
     </div>
+  )
+}
+
+function GameSettings() {
+  const { socket } = useSocket()
+  const { room } = useRoom()
+
+  const running = room.get("running")
+  const settings = room.get("settings")
+  const lives = settings.get("lives")
+  const timer = settings.get("timer")
+
+  const submitForm = (e) => {
+    e.preventDefault()
+    var formData = new FormData(e.target)
+    const lives = formData.get("lives")
+    const timer = formData.get("timer")
+    const data = { lives, timer }
+    socket.emit("setSettings", JSON.stringify(data))
+  }
+
+  if (running) {
+    return null
+  }
+
+  return (
+    <>
+      <form onSubmit={submitForm}>
+        <div>
+          <label>
+            timer
+            <input
+              key={String(timer)}
+              type="number"
+              name="timer"
+              placeholder="timer"
+              defaultValue={String(timer)}
+            />
+          </label>
+        </div>
+        <div>
+          <label>
+            lives
+            <input
+              key={lives}
+              type="number"
+              name="lives"
+              placeholder="lives"
+              defaultValue={lives}
+            />
+          </label>
+        </div>
+        <button type="submit">change settings</button>
+      </form>
+    </>
   )
 }
 
@@ -274,19 +326,26 @@ function Players() {
   const running = room.get("running")
   const currentPlayer = room.get("currentPlayer")
 
-  const [error, setError] = useState("")
+  const [validation, setValidation] = useState("")
 
   useEffect(() => {
-    const triggerError = (val) => {
-      setError(val)
-      setTimeout(() => setError(""), 200)
+    const triggerValidation = (val) => {
+      setValidation(val)
+      setTimeout(() => setValidation(""), 200)
     }
 
-    socket.on("wordError", triggerError)
+    socket.on("wordValidation", triggerValidation)
     return () => {
-      socket.off("wordError", triggerError)
+      socket.off("wordValidation", triggerValidation)
     }
   }, [socket])
+
+  const color =
+    validation === "invalid"
+      ? "red"
+      : validation === "valid"
+      ? "green"
+      : "initial"
 
   return (
     <div>
@@ -295,13 +354,16 @@ function Players() {
         <div key={key}>
           <span
             style={{
-              color: key === currentPlayer && error ? "red" : "initial",
+              color: key === currentPlayer ? color : "initial",
               display: "inline-block",
               marginRight: "1rem",
               fontWeight: key === currentPlayer ? "bold" : "initial"
             }}
           >
-            {value?.name} {running ? new Array(value?.lives).fill("❤") : ""}
+            {value?.name}{" "}
+            <span style={{ color: "red" }}>
+              {running ? new Array(Number(value?.lives)).fill("❤") : ""}
+            </span>
           </span>
           <span>{value?.text}</span>
         </div>
