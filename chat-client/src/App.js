@@ -24,6 +24,8 @@ import { deserialize } from "functions/deserialize"
 import { useLocalStorage } from "functions/hooks"
 import { useDebouncedCallback } from "use-debounce"
 
+const isDevEnv = process.env.NODE_ENV === "development"
+
 const getRoomId = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 4)
 
 const getRandomName = () =>
@@ -96,10 +98,14 @@ const InitializeSocket = () => {
         )
       }
 
-      const newSocket = io({
-        auth: { name, userId },
-        query: { roomId }
-      })
+      const params = { auth: { name, userId }, query: { roomId } }
+      const props = isDevEnv
+        ? [`http://${window.location.hostname}:8080`, params]
+        : [params]
+
+      console.log(props)
+
+      const newSocket = io(...props)
       setSocket(newSocket)
       console.log("setting socket!", newSocket)
 
@@ -235,7 +241,7 @@ function PlayerInput() {
     const val = value.trim().toLowerCase()
     setValue(val)
     socket.emit("setPlayerText", val)
-  }, 40)
+  }, 30)
 
   return (
     <>

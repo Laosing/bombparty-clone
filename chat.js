@@ -62,7 +62,7 @@ function connection(io, socket) {
     const isUnique = !words.has(value)
 
     if (isBlend && isDictionary && isUnique) {
-      console.log(`valid word: ${isDictionary}`)
+      console.log(`valid word: ${value}`)
       words.add(value)
       room.set("letterBlend", getRandomLetters())
       timer.reset()
