@@ -69,10 +69,13 @@ const SocketContext = React.createContext()
 export const useSocket = () => useContext(SocketContext)
 
 const getSocketPath = () => {
-  const port = Number(process.env.PORT || 8080)
+  const port =
+    process.env.NODE_ENV === "development"
+      ? Number(process.env.PORT || 8080)
+      : ""
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
   const host = window.location.hostname
-  const socketPath = `${protocol}//${host}:${port}`
+  const socketPath = `${protocol}//${host}${port ? ":" + port : ""}`
   return socketPath
 }
 
@@ -93,7 +96,7 @@ const InitializeSocket = () => {
         )
       }
 
-      const newSocket = io(getSocketPath(), {
+      const newSocket = io({
         auth: { name, userId },
         query: { roomId }
       })
@@ -229,9 +232,10 @@ function PlayerInput() {
   }
 
   const debounced = useDebouncedCallback((value) => {
-    setValue(value)
-    socket.emit("setPlayerText", value)
-  }, 60)
+    const val = value.trim().toLowerCase()
+    setValue(val)
+    socket.emit("setPlayerText", val)
+  }, 40)
 
   return (
     <>

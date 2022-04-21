@@ -594,6 +594,11 @@ dot-prop@^5.2.0:
   dependencies:
     is-obj "^2.0.0"
 
+dotenv@^16.0.0:
+  version "16.0.0"
+  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-16.0.0.tgz#c619001253be89ebb638d027b609c75c26e47411"
+  integrity sha512-qD9WU0MPM4SWLPJy/r2Be+2WgQj8plChsyrCNQzW/0WjvcJQiKQJ9mH3ZgB3fxbUUxgc/11ZJ0Fi5KiimWGz2Q==
+
 duplexer3@^0.1.4:
   version "0.1.4"
   resolved "https://registry.npmjs.org/duplexer3/-/duplexer3-0.1.4.tgz"
@@ -1232,7 +1237,7 @@ lodash.merge@^4.6.2:
 
 lodash@^4.17.21:
   version "4.17.21"
-  resolved "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
 
 lowercase-keys@^1.0.0, lowercase-keys@^1.0.1:

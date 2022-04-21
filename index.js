@@ -24,8 +24,8 @@ app.set("port", port)
 
 var server = http.createServer(app)
 var io = socketio(server, {
-  // pingTimeout: 60000,
-  // maxHttpBufferSize: 1e8,
+  pingTimeout: 60000,
+  maxHttpBufferSize: 1e8,
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
@@ -39,7 +39,6 @@ chat(io)
 
 server.listen(port, () => {
   console.log(`Server started, listening on port ${port}!`)
-  console.log(server.address())
 })
 server.on("error", onError)
 server.on("listening", onListening)

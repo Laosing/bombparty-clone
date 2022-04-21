@@ -2,7 +2,8 @@ const { nanoid } = require("nanoid")
 const serialize = require("serialize-javascript")
 const Timer = require("easytimer.js").Timer
 
-const dictionary = require("./data/words_dictionary.json")
+const dictionary = require("./data/wordlist.json")
+const { getRandomLetters } = require("./data/randomLetters")
 
 const timer = new Timer({ countdown: true })
 
@@ -56,16 +57,18 @@ function connection(io, socket) {
   function checkWord(value) {
     const { room, letterBlend, words } = getRoom()
 
-    const isBlend = value.includes(letterBlend)
+    const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = dictionary[value]
     const isUnique = !words.has(value)
 
     if (isBlend && isDictionary && isUnique) {
+      console.log(`valid word: ${isDictionary}`)
       words.add(value)
-      room.set("letterBlend", getRandomCluster())
+      room.set("letterBlend", getRandomLetters())
       timer.reset()
       switchPlayer()
     } else {
+      console.log(`invalid word: ${value}`)
       setPlayerText("", false)
     }
     relayRoom()
@@ -117,7 +120,7 @@ function connection(io, socket) {
   function startGame() {
     const { room } = getRoom()
     room.set("running", true)
-    room.set("letterBlend", getRandomCluster())
+    room.set("letterBlend", getRandomLetters())
     room.set("words", new Set())
     resetUserLives()
     switchPlayer()
@@ -254,91 +257,9 @@ function connection(io, socket) {
 
 function chat(io) {
   // io.use(userHandler)
-  io.on("connection", async (socket) => {
+  io.on("connection", (socket) => {
     connection(io, socket)
   })
 }
 
 module.exports = chat
-
-const getRandomCluster = () => cluster[(cluster.length * Math.random()) | 0]
-
-const cluster = [
-  "bl",
-  "br",
-  "cl",
-  "cr",
-  "dr",
-  "fr",
-  "tr",
-  "fl",
-  "gl",
-  "gr",
-  "pl",
-  "pr",
-  "sl",
-  "sm",
-  "sp",
-  "st",
-  "ab",
-  "au",
-  "ch",
-  "ci",
-  "cia",
-  "ck",
-  "ct",
-  "dge",
-  "dis",
-  "dw",
-  "ed",
-  "ex",
-  "ft",
-  "ful",
-  "gh",
-  "in",
-  "ing",
-  "iou",
-  "kn",
-  "ld",
-  "le",
-  "lf",
-  "lk",
-  "lm",
-  "lp",
-  "lt",
-  "ly",
-  "men",
-  "mis",
-  "mp",
-  "nce",
-  "nch",
-  "nd",
-  "ng",
-  "nk",
-  "nse",
-  "nt",
-  "ou",
-  "ov",
-  "ph",
-  "psy",
-  "pt",
-  "re",
-  "sc",
-  "sh",
-  "shr",
-  "sk",
-  "sn",
-  "spr",
-  "str",
-  "sw",
-  "tch",
-  "th",
-  "thr",
-  "tie",
-  "ti",
-  "tur",
-  "tw",
-  "un",
-  "wh",
-  "wr"
-]
