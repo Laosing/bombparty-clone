@@ -56,9 +56,14 @@ function connection(io, socket) {
 
   function updateName(value, userId) {
     if (!value) return
-    const { users } = getRoom()
+    const { users, messages, room } = getRoom()
     const player = users.get(userId)
     users.set(userId, { ...player, name: value })
+    const updateMessages = [...messages].map((m) => ({
+      ...m,
+      user: { ...m.user, name: m.user.id === userId ? value : m.user.name }
+    }))
+    room.set("messages", new Set(updateMessages))
     relayRoom()
   }
 
@@ -124,15 +129,30 @@ function connection(io, socket) {
       const hasWinner = checkGameState()
       if (!hasWinner) {
         switchPlayer()
+        decrementletterBlendCounter()
         timer.reset()
       }
     }
     relayRoom()
   }
 
+  function decrementletterBlendCounter() {
+    const { room, letterBlendCounter, settings } = getRoom()
+    const counter = letterBlendCounter - 1
+    room.set("letterBlendCounter", counter)
+    if (counter <= 0) {
+      const settingsLetterBlendCounter = settings.get("letterBlendCounter")
+      room.set("letterBlend", getRandomLetters())
+      room.set("letterBlendCounter", settingsLetterBlendCounter)
+    }
+  }
+
   function startGame() {
     const { room, settings } = getRoom()
     const startTimer = settings.get("timer")
+    const letterBlendCounter = settings.get("letterBlendCounter")
+    room.set("timer", startTimer)
+    room.set("letterBlendCounter", letterBlendCounter)
     room.set("running", true)
     room.set("letterBlend", getRandomLetters())
     room.set("words", new Set())
@@ -150,7 +170,7 @@ function connection(io, socket) {
 
   function checkGameState() {
     const { users } = getRoom()
-    const remainingPlayers = Array.from(users).filter(([key, value]) =>
+    const remainingPlayers = Array.from(users).filter(([, value]) =>
       Boolean(value.lives)
     )
     const hasWinner = remainingPlayers.length === 1
@@ -163,7 +183,6 @@ function connection(io, socket) {
 
   function stopGame(player) {
     const { room } = getRoom()
-    timer.reset()
     timer.stop()
     timer.removeAllEventListeners()
     room.set("winner", player)
@@ -223,10 +242,11 @@ function connection(io, socket) {
       users: setProp(room, "users", new Map()),
       words: setProp(room, "words", new Set()),
       letterBlend: setProp(room, "letterBlend", ""),
-      timer: setProp(room, "timer", ""),
+      timer: setProp(room, "timer", 0),
       currentPlayer: setProp(room, "currentPlayer", ""),
       running: setProp(room, "running", false),
       winner: setProp(room, "winner", null),
+      letterBlendCounter: setProp(room, "letterBlendCounter", 0),
       settings: setProp(room, "settings", new Map())
     }
 
@@ -240,14 +260,19 @@ function connection(io, socket) {
   }
 
   function setSettings(data) {
-    const _timer = data?.timer || 10
-    const _lives = data?.lives || 2
+    const { settings } = getRoom()
 
-    const { settings, room } = getRoom()
-    room.set("timer", Number(_timer))
-    settings.set("timer", Number(_timer))
-    settings.set("lives", _lives)
-    data && relayRoom()
+    const timer = data?.timer || settings.get("timer") || 10
+    const lives = data?.lives || settings.get("lives") || 2
+    const letterBlendCounter =
+      data?.letterBlendCounter || settings.get("letterBlendCounter") || 2
+    settings.set("timer", Number(timer))
+    settings.set("lives", lives)
+    settings.set("letterBlendCounter", letterBlendCounter)
+    if (data) {
+      io.sockets.in(roomId).emit("setSettings", true)
+      relayRoom()
+    }
   }
 
   function handleMessage(value) {

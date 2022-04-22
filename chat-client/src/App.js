@@ -8,6 +8,7 @@ import {
   Outlet,
   Route,
   Routes,
+  useNavigate,
   useParams
 } from "react-router-dom"
 
@@ -34,18 +35,17 @@ const getRandomName = () =>
     length: 2
   })
 
-const randomName = getRandomName()
-
 function Header() {
   const { socket } = useSocket()
-  const [name, setName] = useLocalStorage("name", randomName)
+  const [name, setName] = useLocalStorage("name")
   const [id] = useLocalStorage("userId")
   const editName = () => {
-    const newName = window.prompt("name:") || ""
-    if (newName.trim()) {
-      setName(newName)
-      socket.emit("updateName", newName, id)
-    }
+    const newName =
+      window
+        .prompt("name: (leaving this blank will generate a random name)")
+        .trim() || getRandomName()
+    setName(newName)
+    socket.emit("updateName", newName, id)
   }
 
   return (
@@ -72,7 +72,7 @@ const Router = () => {
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<Home />} />
-          <Route path=":roomId" element={<InitializeSocket />}></Route>
+          <Route path=":roomId" element={<ValidateRoom />}></Route>
         </Route>
       </Routes>
     </BrowserRouter>
@@ -80,7 +80,41 @@ const Router = () => {
 }
 
 const Home = () => {
-  return <Link to={getRoomId()}>Create room</Link>
+  const navigate = useNavigate()
+  const onSubmit = (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    const room = formData.get("room")
+    navigate(room)
+  }
+
+  return (
+    <>
+      <Link to={getRoomId()}>Create room</Link>
+      <form onSubmit={onSubmit}>
+        <label>
+          join room
+          <input name="room"></input>
+          <button>submit</button>
+        </label>
+      </form>
+    </>
+  )
+}
+
+function ValidateRoom() {
+  const { roomId } = useParams()
+  const validRoomId = roomId.match(/^[A-Z]*$/) && roomId.length === 4
+
+  if (!validRoomId) {
+    return (
+      <>
+        Room not valid <Link to="/">back to home</Link>
+      </>
+    )
+  }
+
+  return <InitializeSocket />
 }
 
 const SocketContext = React.createContext()
@@ -89,7 +123,7 @@ export const useSocket = () => useContext(SocketContext)
 const InitializeSocket = () => {
   const { roomId } = useParams()
   const [socket, setSocket] = useState(undefined)
-  const [name] = useLocalStorage("name", randomName)
+  const [name] = useLocalStorage("name", getRandomName())
   const [userId] = useLocalStorage("userId")
   const hasSocket = socket?.id
 
@@ -98,7 +132,7 @@ const InitializeSocket = () => {
       const logger = (event, ...args) => {
         console.log(
           "%c" + event,
-          "color: yellow;",
+          "color: pink;",
           event === "getRoom" ? deserialize(args) : args
         )
       }
@@ -143,7 +177,6 @@ function InitializeRoom() {
     const getRoom = (val) => setRoom(deserialize(val))
 
     socket.emit("getRoom")
-
     socket.on("getRoom", getRoom)
     return () => {
       socket.off("getRoom", getRoom)
@@ -193,15 +226,31 @@ function GameSettings() {
   const settings = room.get("settings")
   const lives = settings.get("lives")
   const timer = settings.get("timer")
+  const letterBlendCounter = settings.get("letterBlendCounter")
 
   const submitForm = (e) => {
     e.preventDefault()
     var formData = new FormData(e.target)
     const lives = formData.get("lives")
     const timer = formData.get("timer")
-    const data = { lives, timer }
+    const letterBlendCounter = formData.get("letterBlendCounter")
+    const data = { lives, timer, letterBlendCounter }
     socket.emit("setSettings", JSON.stringify(data))
   }
+
+  const [notification, setNotification] = useState(false)
+
+  useEffect(() => {
+    const triggerValidation = (val) => {
+      setNotification(val)
+      setTimeout(() => setNotification(false), 200)
+    }
+
+    socket.on("setSettings", triggerValidation)
+    return () => {
+      socket.off("setSettings", triggerValidation)
+    }
+  }, [socket])
 
   if (running) {
     return null
@@ -217,8 +266,9 @@ function GameSettings() {
               key={String(timer)}
               type="number"
               name="timer"
-              placeholder="timer"
               defaultValue={String(timer)}
+              min="1"
+              step="1"
             />
           </label>
         </div>
@@ -229,12 +279,27 @@ function GameSettings() {
               key={lives}
               type="number"
               name="lives"
-              placeholder="lives"
               defaultValue={lives}
+              min="1"
+              step="1"
+            />
+          </label>
+        </div>
+        <div>
+          <label>
+            change letters after attempts
+            <input
+              key={letterBlendCounter}
+              type="number"
+              name="letterBlendCounter"
+              defaultValue={letterBlendCounter}
+              min="1"
+              step="1"
             />
           </label>
         </div>
         <button type="submit">change settings</button>
+        {notification && "updated!"}
       </form>
     </>
   )
