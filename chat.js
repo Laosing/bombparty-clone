@@ -36,8 +36,8 @@ function connection(io, socket) {
   setSettings()
 
   socket.on("setSettings", (value) => setSettings(JSON.parse(value)))
-  socket.on("checkWord", (value) => checkWord(value))
-  socket.on("setPlayerText", (value) => setPlayerText(value))
+  socket.on("checkWord", (value, userId) => checkWord(value, userId))
+  socket.on("setPlayerText", (value, userId) => setPlayerText(value, userId))
   socket.on("startGame", () => startGame())
   socket.on("stopGame", () => stopGame())
   socket.on("switchPlayer", () => switchPlayer())
@@ -67,7 +67,7 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function checkWord(value) {
+  function checkWord(value, userId) {
     const { roomId, room, letterBlend, words } = getRoom()
 
     const isBlend = value.includes(letterBlend.toLowerCase())
@@ -77,15 +77,26 @@ function connection(io, socket) {
 
     if (isBlend && isDictionary && isUnique && isLongEnough) {
       console.log(`valid word: ${value}`)
-      io.sockets.in(roomId).emit("wordValidation", "valid")
+      io.sockets
+        .in(roomId)
+        .emit("wordValidation", "valid", JSON.stringify({ value, letterBlend }))
       words.add(value)
       room.set("letterBlend", getRandomLetters())
       timer.reset()
       switchPlayer()
     } else {
       console.log(`invalid word: ${value}`)
-      io.sockets.in(roomId).emit("wordValidation", "invalid")
-      setPlayerText("", false)
+      io.sockets.in(roomId).emit(
+        "wordValidation",
+        "invalid",
+        JSON.stringify({
+          isBlend,
+          isDictionary,
+          isUnique,
+          isLongEnough
+        })
+      )
+      setPlayerText("", userId, false)
     }
     relayRoom()
   }
@@ -108,10 +119,10 @@ function connection(io, socket) {
     }
   }
 
-  function setPlayerText(text, relay = true) {
-    const { users, currentPlayer } = getRoom()
-    const player = users.get(currentPlayer)
-    users.set(currentPlayer, { ...player, text })
+  function setPlayerText(text, userId, relay = true) {
+    const { users } = getRoom()
+    const player = users.get(userId)
+    users.set(userId, { ...player, text })
     relay && relayRoom()
   }
 

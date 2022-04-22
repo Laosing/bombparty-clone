@@ -361,15 +361,15 @@ function PlayerInput() {
 
   const submitForm = (e) => {
     e.preventDefault()
-    socket.emit("checkWord", value)
+    socket.emit("checkWord", value, userId)
     e.target.reset()
   }
 
   const debounced = useDebouncedCallback((value) => {
     const val = value.trim().toLowerCase()
     setValue(val)
-    socket.emit("setPlayerText", val)
-  }, 30)
+    socket.emit("setPlayerText", val, userId)
+  }, 40)
 
   return (
     <>
