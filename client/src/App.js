@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react"
 import io from "socket.io-client"
 
-import "./App.css"
+import "./App.scss"
 import {
   BrowserRouter,
   Link,
@@ -24,6 +24,15 @@ import { useLocalStorage } from "functions/hooks"
 import { useDebouncedCallback } from "use-debounce"
 import { MessagesWrapper } from "components/Messages"
 
+import {
+  Navbar,
+  Container,
+  Button,
+  Form,
+  InputGroup,
+  FormControl
+} from "react-bootstrap"
+
 const isDevEnv = process.env.NODE_ENV === "development"
 
 const getRoomId = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 4)
@@ -35,24 +44,37 @@ const getRandomName = () =>
     length: 2
   })
 
-function Header() {
+function Header({ children }) {
+  return (
+    <Navbar bg="dark" variant="dark">
+      <Container>
+        <Navbar.Brand href="/">Bombparty-clone</Navbar.Brand>
+        {children}
+      </Container>
+    </Navbar>
+  )
+}
+
+function HeaderUser() {
   const { socket } = useSocket()
   const [name, setName] = useLocalStorage("name")
   const [id] = useLocalStorage("userId")
   const editName = () => {
-    const newName =
-      window
-        .prompt("name: (leaving this blank will generate a random name)")
-        .trim() || getRandomName()
+    const namePrompt = window.prompt(
+      "name: (leaving this blank will generate a random name)"
+    )
+    const newName = namePrompt ? namePrompt.trim() : getRandomName()
     setName(newName)
     socket.emit("updateName", newName, id)
   }
 
   return (
-    <div>
-      <span>Current user: {name}</span>{" "}
-      <button onClick={editName}>change name</button>
-    </div>
+    <Navbar.Text className="justify-content-end">
+      Signed in as: <span className="text-white me-3">{name}</span>
+      <Button onClick={editName} size="sm">
+        Change name
+      </Button>
+    </Navbar.Text>
   )
 }
 
@@ -79,25 +101,39 @@ const Router = () => {
   )
 }
 
+const Layout = ({ children }) => {
+  return <Container className="mt-5 text-center">{children}</Container>
+}
+
 const Home = () => {
   const navigate = useNavigate()
   const onSubmit = (e) => {
+    console.log(e)
     e.preventDefault()
     const formData = new FormData(e.target)
-    const room = formData.get("room")
+    const room = formData.get("room").toUpperCase()
     navigate(room)
   }
 
   return (
     <>
-      <Link to={getRoomId()}>Create room</Link>
-      <form onSubmit={onSubmit}>
-        <label>
-          join room
-          <input name="room"></input>
-          <button>submit</button>
-        </label>
-      </form>
+      <Header />
+      <Layout>
+        <Button as={Link} to={getRoomId()} className="mb-3">
+          Create room
+        </Button>
+        <Form
+          onSubmit={onSubmit}
+          style={{ maxWidth: "500px" }}
+          className="m-auto"
+        >
+          <InputGroup className="mb-3">
+            <InputGroup.Text>Join room</InputGroup.Text>
+            <FormControl name="room" style={{ textTransform: "uppercase" }} />
+            <Button type="submit">Join</Button>
+          </InputGroup>
+        </Form>
+      </Layout>
     </>
   )
 }
@@ -109,7 +145,13 @@ function ValidateRoom() {
   if (!validRoomId) {
     return (
       <>
-        Room not valid <Link to="/">back to home</Link>
+        <Header />
+        <Layout>
+          <h1 className="h3 mb-3">Invalid room</h1>
+          <Button as={Link} to="/">
+            Back to home
+          </Button>
+        </Layout>
       </>
     )
   }
@@ -155,7 +197,11 @@ const InitializeSocket = () => {
   }, [name, roomId, setSocket, hasSocket, userId])
 
   if (!socket) {
-    return <>Not Connected</>
+    return (
+      <>
+        <h1 className="h3">Not Connected, try refreshing</h1>
+      </>
+    )
   }
 
   return (
@@ -184,7 +230,7 @@ function InitializeRoom() {
   }, [socket])
 
   if (!room) {
-    return <>initializing room</>
+    return <h1 className="h3">initializing room</h1>
   }
 
   if (!room.get("users").has(userId)) {
@@ -203,17 +249,21 @@ function Room() {
 
   return (
     <div>
-      <div style={{ marginBottom: "5rem" }}>
-        <Header />
-        <Link to="/">Leave room</Link> Current room: {roomId}
-        <GameSettings />
-      </div>
-      <div style={{ marginBottom: "5rem" }}>
-        <Game />
-      </div>
-      <div>
-        <MessagesWrapper />
-      </div>
+      <Header>
+        <HeaderUser />
+      </Header>
+      <Layout>
+        <div style={{ marginBottom: "5rem" }}>
+          <Link to="/">Leave room</Link> Current room: {roomId}
+          <GameSettings />
+        </div>
+        <div style={{ marginBottom: "5rem" }}>
+          <Game />
+        </div>
+        <div>
+          <MessagesWrapper />
+        </div>
+      </Layout>
     </div>
   )
 }
@@ -369,7 +419,7 @@ function PlayerInput() {
     const val = value.trim().toLowerCase()
     setValue(val)
     socket.emit("setPlayerText", val, userId)
-  }, 40)
+  }, 30)
 
   return (
     <>

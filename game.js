@@ -68,14 +68,21 @@ function connection(io, socket) {
   }
 
   function checkWord(value, userId) {
-    const { roomId, room, letterBlend, words } = getRoom()
+    const { roomId, room, letterBlend, words, currentPlayer } = getRoom()
 
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = dictionary[value]
     const isUnique = !words.has(value)
     const isLongEnough = value.length >= 3
+    const isCurrentPlayer = currentPlayer === userId
 
-    if (isBlend && isDictionary && isUnique && isLongEnough) {
+    if (
+      isBlend &&
+      isDictionary &&
+      isUnique &&
+      isLongEnough &&
+      isCurrentPlayer
+    ) {
       console.log(`valid word: ${value}`)
       io.sockets
         .in(roomId)
@@ -277,9 +284,10 @@ function connection(io, socket) {
     const lives = data?.lives || settings.get("lives") || 2
     const letterBlendCounter =
       data?.letterBlendCounter || settings.get("letterBlendCounter") || 2
-    settings.set("timer", Number(timer))
-    settings.set("lives", lives)
-    settings.set("letterBlendCounter", letterBlendCounter)
+    settings
+      .set("timer", Number(timer))
+      .set("lives", lives)
+      .set("letterBlendCounter", letterBlendCounter)
     if (data) {
       io.sockets.in(roomId).emit("setSettings", true)
       relayRoom()

@@ -1,16 +1,17 @@
 {
-  "name": "chat-server",
+  "name": "@laosing/bombparty-clone",
   "version": "0.0.0",
   "private": true,
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently 'nodemon index.js' 'cd chat-client && yarn && yarn start'",
+    "dev": "concurrently 'nodemon index.js' 'cd client && yarn && yarn start'",
     "start": "node index.js",
-    "build": "cd chat-client && yarn && yarn build",
+    "build": "cd client && yarn && yarn build",
     "deploy": "fly deploy --remote-only --no-cache"
   },
   "dependencies": {
     "babel-eslint": "^10.1.0",
+    "bootstrap": "^5.1.3",
     "concurrently": "^7.1.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
@@ -22,7 +23,9 @@
     "morgan": "~1.9.1",
     "nanoid": "^3.3.2",
     "nodemon": "^2.0.15",
+    "react-bootstrap": "^2.3.0",
     "rimraf": "^3.0.2",
+    "sass": "^1.50.1",
     "serialize-javascript": "^6.0.0",
     "socket.io": "^4.4.1"
   }
