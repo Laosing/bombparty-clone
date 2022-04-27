@@ -52,7 +52,7 @@ const MessageInput = () => {
 
   const submitForm = (e) => {
     e.preventDefault()
-    const value = inputRef.current.value.toLowerCase().trim()
+    const value = inputRef.current.value.trim()
     if (value) {
       socket.emit("message", value)
     }

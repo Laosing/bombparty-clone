@@ -30,7 +30,9 @@ import {
   Button,
   Form,
   InputGroup,
-  FormControl
+  FormControl,
+  Row,
+  Col
 } from "react-bootstrap"
 
 const isDevEnv = process.env.NODE_ENV === "development"
@@ -48,7 +50,7 @@ function Header({ children }) {
   return (
     <Navbar bg="dark" variant="dark">
       <Container>
-        <Navbar.Brand href="/">Bombparty-clone</Navbar.Brand>
+        <Navbar.Brand>Bombparty-clone</Navbar.Brand>
         {children}
       </Container>
     </Navbar>
@@ -63,15 +65,17 @@ function HeaderUser() {
     const namePrompt = window.prompt(
       "name: (leaving this blank will generate a random name)"
     )
-    const newName = namePrompt ? namePrompt.trim() : getRandomName()
-    setName(newName)
-    socket.emit("updateName", newName, id)
+    if (namePrompt !== null) {
+      const newName = namePrompt ? namePrompt.trim() : getRandomName()
+      setName(newName)
+      socket.emit("updateName", newName, id)
+    }
   }
 
   return (
-    <Navbar.Text className="justify-content-end">
-      Signed in as: <span className="text-white me-3">{name}</span>
-      <Button onClick={editName} size="sm">
+    <Navbar.Text className="d-flex align-items-center p-0">
+      Signed in as: <span className="text-white me-3 ms-1">{name}</span>
+      <Button onClick={editName} size="sm" variant="outline-light">
         Change name
       </Button>
     </Navbar.Text>
@@ -101,6 +105,13 @@ const Router = () => {
   )
 }
 
+const LayoutWithHeader = ({ children }) => (
+  <>
+    <Header />
+    <Layout>{children}</Layout>
+  </>
+)
+
 const Layout = ({ children }) => {
   return <Container className="mt-5 text-center">{children}</Container>
 }
@@ -116,25 +127,22 @@ const Home = () => {
   }
 
   return (
-    <>
-      <Header />
-      <Layout>
-        <Button as={Link} to={getRoomId()} className="mb-3">
-          Create room
-        </Button>
-        <Form
-          onSubmit={onSubmit}
-          style={{ maxWidth: "500px" }}
-          className="m-auto"
-        >
-          <InputGroup className="mb-3">
-            <InputGroup.Text>Join room</InputGroup.Text>
-            <FormControl name="room" style={{ textTransform: "uppercase" }} />
-            <Button type="submit">Join</Button>
-          </InputGroup>
-        </Form>
-      </Layout>
-    </>
+    <LayoutWithHeader>
+      <Button as={Link} to={getRoomId()} className="mb-3">
+        Create room
+      </Button>
+      <Form
+        onSubmit={onSubmit}
+        style={{ maxWidth: "500px" }}
+        className="m-auto"
+      >
+        <InputGroup className="mb-3">
+          <InputGroup.Text>Join room</InputGroup.Text>
+          <FormControl name="room" style={{ textTransform: "uppercase" }} />
+          <Button type="submit">Join</Button>
+        </InputGroup>
+      </Form>
+    </LayoutWithHeader>
   )
 }
 
@@ -144,15 +152,12 @@ function ValidateRoom() {
 
   if (!validRoomId) {
     return (
-      <>
-        <Header />
-        <Layout>
-          <h1 className="h3 mb-3">Invalid room</h1>
-          <Button as={Link} to="/">
-            Back to home
-          </Button>
-        </Layout>
-      </>
+      <LayoutWithHeader>
+        <h1 className="h3 mb-3">Invalid room</h1>
+        <Button as={Link} to="/">
+          Back to home
+        </Button>
+      </LayoutWithHeader>
     )
   }
 
@@ -198,9 +203,9 @@ const InitializeSocket = () => {
 
   if (!socket) {
     return (
-      <>
+      <LayoutWithHeader>
         <h1 className="h3">Not Connected, try refreshing</h1>
-      </>
+      </LayoutWithHeader>
     )
   }
 
@@ -230,11 +235,19 @@ function InitializeRoom() {
   }, [socket])
 
   if (!room) {
-    return <h1 className="h3">initializing room</h1>
+    return (
+      <LayoutWithHeader>
+        <h1 className="h3">initializing room</h1>
+      </LayoutWithHeader>
+    )
   }
 
   if (!room.get("users").has(userId)) {
-    return <>disconnected!</>
+    return (
+      <LayoutWithHeader>
+        <h1 className="h3">Disconnected!</h1>
+      </LayoutWithHeader>
+    )
   }
 
   return (
@@ -248,13 +261,18 @@ function Room() {
   const { roomId } = useRoom()
 
   return (
-    <div>
+    <>
       <Header>
+        <Navbar.Text className="d-flex align-items-center p-0">
+          Current room: <span className="text-white me-3 ms-1">{roomId}</span>
+          <Button as={Link} to="/" size="sm" variant="danger">
+            Leave room
+          </Button>
+        </Navbar.Text>
         <HeaderUser />
       </Header>
       <Layout>
-        <div style={{ marginBottom: "5rem" }}>
-          <Link to="/">Leave room</Link> Current room: {roomId}
+        <div>
           <GameSettings />
         </div>
         <div style={{ marginBottom: "5rem" }}>
@@ -264,7 +282,7 @@ function Room() {
           <MessagesWrapper />
         </div>
       </Layout>
-    </div>
+    </>
   )
 }
 
@@ -308,11 +326,11 @@ function GameSettings() {
 
   return (
     <>
-      <form onSubmit={submitForm}>
-        <div>
-          <label>
-            timer
-            <input
+      <Form className="text-start" onSubmit={submitForm}>
+        <Row className="mb-3">
+          <Form.Group as={Col} controlId="timer">
+            <Form.Label>Timer</Form.Label>
+            <Form.Control
               key={String(timer)}
               type="number"
               name="timer"
@@ -320,12 +338,10 @@ function GameSettings() {
               min="1"
               step="1"
             />
-          </label>
-        </div>
-        <div>
-          <label>
-            lives
-            <input
+          </Form.Group>
+          <Form.Group as={Col} controlId="lives">
+            <Form.Label>Lives</Form.Label>
+            <Form.Control
               key={lives}
               type="number"
               name="lives"
@@ -333,12 +349,10 @@ function GameSettings() {
               min="1"
               step="1"
             />
-          </label>
-        </div>
-        <div>
-          <label>
-            change letters after attempts
-            <input
+          </Form.Group>
+          <Form.Group as={Col} controlId="letterBlendCounter">
+            <Form.Label>Change letters after attempts</Form.Label>
+            <Form.Control
               key={letterBlendCounter}
               type="number"
               name="letterBlendCounter"
@@ -346,11 +360,15 @@ function GameSettings() {
               min="1"
               step="1"
             />
-          </label>
-        </div>
-        <button type="submit">change settings</button>
-        {notification && "updated!"}
-      </form>
+          </Form.Group>
+          <Col className="d-flex align-items-end">
+            <Button type="submit" variant="outline-primary">
+              Change settings
+            </Button>
+            {notification && "updated!"}
+          </Col>
+        </Row>
+      </Form>
     </>
   )
 }
@@ -377,15 +395,15 @@ function Game() {
   return (
     <>
       <div>
-        <button onClick={toggleGame} style={{ marginBottom: "3rem" }}>
-          {running ? "stop" : "start"}
-        </button>
+        <Button onClick={toggleGame} style={{ marginBottom: "3rem" }}>
+          {running ? "Stop" : "Start"}
+        </Button>
         {running && (
-          <>
-            <div>{letterBlend?.toUpperCase()}</div>
+          <div className="mb-5">
+            <div className="h1">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
-            <div>{timer}</div>
-          </>
+            <div className="h3">{timer}</div>
+          </div>
         )}
         {!running && winner && <Winner winner={winner} />}
       </div>
@@ -424,9 +442,16 @@ function PlayerInput() {
   return (
     <>
       {currentPlayer && (
-        <form onSubmit={submitForm}>
-          <input autoFocus onChange={(e) => debounced(e.target.value)} />
-        </form>
+        <Form
+          onSubmit={submitForm}
+          className="d-flex justify-content-center my-3"
+        >
+          <Form.Control
+            style={{ maxWidth: "30em" }}
+            autoFocus
+            onChange={(e) => debounced(e.target.value)}
+          />
+        </Form>
       )}
     </>
   )
