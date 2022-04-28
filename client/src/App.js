@@ -267,9 +267,7 @@ function Room() {
         <Row className="flex-grow-1">
           <Col md={8}>
             <Layout>
-              <div style={{ marginBottom: "5rem" }}>
-                <Game />
-              </div>
+              <Game />
             </Layout>
           </Col>
           <Col
@@ -294,6 +292,35 @@ function Room() {
           </Col>
         </Row>
       </Container>
+    </>
+  )
+}
+
+function HeartLetters() {
+  const { userId } = useSocket()
+  const { room } = useRoom()
+
+  const running = room.get("running")
+  const userLetters = [...room.get("users").get(userId).letters]
+  const letters = "abcdefghijklmnopqrstuvwxyz"
+
+  if (!running) {
+    return null
+  }
+
+  return (
+    <>
+      {[...letters].map((letter) => (
+        <Button
+          size="sm"
+          disabled
+          key={letter}
+          variant={userLetters.includes(letter) ? "dark" : "outline-dark"}
+          className={`me-1`}
+        >
+          {letter.toUpperCase()}
+        </Button>
+      ))}
     </>
   )
 }
@@ -411,7 +438,7 @@ function Game() {
 
   return (
     <>
-      <div>
+      <div className="mb-4">
         <Button
           variant={running ? "danger" : "primary"}
           onClick={toggleGame}
@@ -419,8 +446,11 @@ function Game() {
         >
           {running ? "Stop" : "Start Game"}
         </Button>
+        <div>
+          <HeartLetters />
+        </div>
         {running && (
-          <div className="mb-5">
+          <div className="my-5">
             <div className="h1">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
             <div className="h3">{timer}</div>
@@ -524,7 +554,7 @@ function Players() {
               {running ? new Array(Number(value?.lives)).fill("❤") : ""}
             </span>
           </span>
-          <span>{value?.text}</span>
+          {running && <span>{value?.text}</span>}
         </div>
       ))}
     </div>

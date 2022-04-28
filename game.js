@@ -67,6 +67,17 @@ function connection(io, socket) {
     relayRoom()
   }
 
+  function setUserLetters(value, userId) {
+    const { users } = getRoom()
+    const user = users.get(userId)
+    const letters = new Set([...user.letters, ...value.split("")])
+    if (letters.size >= 26) {
+      users.set(userId, { ...user, lives: user.lives + 1, letters: new Set() })
+    } else {
+      users.set(userId, { ...user, letters })
+    }
+  }
+
   function checkWord(value, userId) {
     const { roomId, room, letterBlend, words, currentPlayer } = getRoom()
 
@@ -88,6 +99,7 @@ function connection(io, socket) {
         .in(roomId)
         .emit("wordValidation", "valid", JSON.stringify({ value, letterBlend }))
       words.add(value)
+      setUserLetters(value, userId)
       room.set("letterBlend", getRandomLetters())
       timer.reset()
       switchPlayer()
@@ -174,7 +186,7 @@ function connection(io, socket) {
     room.set("running", true)
     room.set("letterBlend", getRandomLetters())
     room.set("words", new Set())
-    resetUserLives()
+    resetUser()
     switchPlayer()
 
     timer.start({ startValues: { seconds: startTimer } })
@@ -207,23 +219,15 @@ function connection(io, socket) {
     room.set("running", false)
     room.set("currentPlayer", "")
     room.set("letterBlend", "")
-    resetUserText()
+    // resetUser()
     relayRoom()
   }
 
-  function resetUserLives() {
+  function resetUser() {
     const { room, users, settings } = getRoom()
     const lives = settings.get("lives")
     const updatedUsers = Array.from(users, ([key, value]) => {
-      return [key, { ...value, lives }]
-    })
-    room.set("users", new Map(updatedUsers))
-  }
-
-  function resetUserText() {
-    const { room, users } = getRoom()
-    const updatedUsers = Array.from(users, ([key, value]) => {
-      return [key, { ...value, text: "" }]
+      return [key, { ...value, letters: new Set(), lives, text: "" }]
     })
     room.set("users", new Map(updatedUsers))
   }
@@ -274,7 +278,7 @@ function connection(io, socket) {
   function initializeUser() {
     const { name, userId } = socket.handshake.auth
     const { users } = getRoom()
-    users.set(userId, { id: userId, name })
+    users.set(userId, { id: userId, name, letters: new Set() })
   }
 
   function setSettings(data) {
