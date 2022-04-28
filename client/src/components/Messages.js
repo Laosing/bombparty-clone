@@ -1,16 +1,10 @@
 import React from "react"
 import { useRoom, useSocket } from "App"
+import { Form, ListGroup, ListGroupItem } from "react-bootstrap"
 
 export function MessagesWrapper() {
   return (
-    <div
-      style={{
-        textAlign: "left",
-        border: "1px solid black",
-        maxWidth: "400px",
-        margin: "auto"
-      }}
-    >
+    <div className="p-3 d-flex flex-column flex-grow-1">
       <Messages />
       <MessageInput />
     </div>
@@ -20,29 +14,34 @@ export function MessagesWrapper() {
 function Messages() {
   const { room } = useRoom()
   const messages = room.get("messages")
+  const ref = React.useRef()
 
-  const roomMessages = [...messages]
+  React.useEffect(
+    () => ref?.current?.scrollIntoView({ behavior: "smooth" }),
+    [messages.size]
+  )
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h4 style={{ margin: 0 }}>chat box</h4>
-      {roomMessages
-        .sort((a, b) => a.time - b.time)
-        .map((message) => (
-          <div
-            key={message.id}
-            title={`Sent at ${new Date(message.time).toLocaleTimeString()}`}
-          >
-            <span>
-              <small>{new Date(message.time).toLocaleTimeString()}</small>
-              {" : "}
-              {message.user.name}
-              {" - "}
-            </span>{" "}
-            <span>{message.value}</span>{" "}
-          </div>
-        ))}
-    </div>
+    <>
+      <div className="overflow-auto" style={{ flex: "1 1 0" }}>
+        <ListGroup className="mt-auto">
+          {[...messages]
+            .sort((a, b) => a.time - b.time)
+            .map((message) => (
+              <ListGroupItem key={message.id}>
+                <span>
+                  <small>{new Date(message.time).toLocaleTimeString()}</small>
+                  {" : "}
+                  {message.user.name}
+                  {" - "}
+                </span>
+                <span>{message.value}</span>
+              </ListGroupItem>
+            ))}
+          <div ref={ref}></div>
+        </ListGroup>
+      </div>
+    </>
   )
 }
 
@@ -60,17 +59,8 @@ const MessageInput = () => {
   }
 
   return (
-    <form onSubmit={submitForm}>
-      <input
-        style={{
-          width: "100%",
-          border: 0,
-          borderTop: "1px solid black",
-          padding: "1rem"
-        }}
-        ref={inputRef}
-        placeholder="Type your message"
-      />
-    </form>
+    <Form onSubmit={submitForm} className="mt-auto">
+      <Form.Control ref={inputRef} placeholder="Type your message" />
+    </Form>
   )
 }

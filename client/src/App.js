@@ -32,7 +32,9 @@ import {
   InputGroup,
   FormControl,
   Row,
-  Col
+  Col,
+  Stack,
+  ListGroup
 } from "react-bootstrap"
 
 const isDevEnv = process.env.NODE_ENV === "development"
@@ -49,7 +51,7 @@ const getRandomName = () =>
 function Header({ children }) {
   return (
     <Navbar bg="dark" variant="dark">
-      <Container>
+      <Container fluid>
         <Navbar.Brand>Bombparty-clone</Navbar.Brand>
         {children}
       </Container>
@@ -83,11 +85,7 @@ function HeaderUser() {
 }
 
 function App() {
-  return (
-    <div>
-      <Outlet />
-    </div>
-  )
+  return <Outlet />
 }
 
 const Router = () => {
@@ -263,25 +261,39 @@ function Room() {
   return (
     <>
       <Header>
-        <Navbar.Text className="d-flex align-items-center p-0">
-          Current room: <span className="text-white me-3 ms-1">{roomId}</span>
-          <Button as={Link} to="/" size="sm" variant="danger">
-            Leave room
-          </Button>
-        </Navbar.Text>
         <HeaderUser />
       </Header>
-      <Layout>
-        <div>
-          <GameSettings />
-        </div>
-        <div style={{ marginBottom: "5rem" }}>
-          <Game />
-        </div>
-        <div>
-          <MessagesWrapper />
-        </div>
-      </Layout>
+      <Container fluid className="d-flex flex-grow-1">
+        <Row className="flex-grow-1">
+          <Col md={8}>
+            <Layout>
+              <div style={{ marginBottom: "5rem" }}>
+                <Game />
+              </div>
+            </Layout>
+          </Col>
+          <Col
+            md={4}
+            className="p-0 d-flex flex-column"
+            style={{ background: "var(--bs-gray-200)" }}
+          >
+            <ListGroup className="p-3">
+              <ListGroup.Item className="d-flex justify-content-between align-items-center p-2">
+                <span>
+                  Current room: <strong>{roomId}</strong>
+                </span>
+                <Button as={Link} to="/" size="sm" variant="danger">
+                  Leave room
+                </Button>
+              </ListGroup.Item>
+            </ListGroup>
+            <hr className="m-0" />
+            <GameSettings />
+            <hr className="m-0" />
+            <MessagesWrapper />
+          </Col>
+        </Row>
+      </Container>
     </>
   )
 }
@@ -311,7 +323,7 @@ function GameSettings() {
   useEffect(() => {
     const triggerValidation = (val) => {
       setNotification(val)
-      setTimeout(() => setNotification(false), 200)
+      setTimeout(() => setNotification(false), 500)
     }
 
     socket.on("setSettings", triggerValidation)
@@ -320,53 +332,58 @@ function GameSettings() {
     }
   }, [socket])
 
-  if (running) {
-    return null
-  }
-
   return (
     <>
-      <Form className="text-start" onSubmit={submitForm}>
-        <Row className="mb-3">
-          <Form.Group as={Col} controlId="timer">
-            <Form.Label>Timer</Form.Label>
-            <Form.Control
-              key={String(timer)}
-              type="number"
-              name="timer"
-              defaultValue={String(timer)}
-              min="1"
-              step="1"
-            />
-          </Form.Group>
-          <Form.Group as={Col} controlId="lives">
-            <Form.Label>Lives</Form.Label>
-            <Form.Control
-              key={lives}
-              type="number"
-              name="lives"
-              defaultValue={lives}
-              min="1"
-              step="1"
-            />
-          </Form.Group>
-          <Form.Group as={Col} controlId="letterBlendCounter">
-            <Form.Label>Change letters after attempts</Form.Label>
-            <Form.Control
-              key={letterBlendCounter}
-              type="number"
-              name="letterBlendCounter"
-              defaultValue={letterBlendCounter}
-              min="1"
-              step="1"
-            />
-          </Form.Group>
-          <Col className="d-flex align-items-end">
-            <Button type="submit" variant="outline-primary">
-              Change settings
-            </Button>
-            {notification && "updated!"}
-          </Col>
+      <Form onSubmit={submitForm} className="p-3">
+        <Row>
+          <Stack gap={3}>
+            <Form.Group controlId="timer">
+              <Form.Label>Timer</Form.Label>
+              <Form.Control
+                key={String(timer)}
+                type="number"
+                name="timer"
+                defaultValue={String(timer)}
+                min="1"
+                step="1"
+                disabled={running}
+              />
+            </Form.Group>
+            <Form.Group controlId="lives">
+              <Form.Label>Lives</Form.Label>
+              <Form.Control
+                key={lives}
+                type="number"
+                name="lives"
+                defaultValue={lives}
+                min="1"
+                step="1"
+                disabled={running}
+              />
+            </Form.Group>
+            <Form.Group controlId="letterBlendCounter">
+              <Form.Label>Change letters after # turns</Form.Label>
+              <Form.Control
+                key={letterBlendCounter}
+                type="number"
+                name="letterBlendCounter"
+                defaultValue={letterBlendCounter}
+                min="1"
+                step="1"
+                disabled={running}
+              />
+            </Form.Group>
+            <div className="d-flex align-items-end">
+              <Button
+                type="submit"
+                variant={notification ? "success" : "dark"}
+                className="w-100"
+                disabled={running}
+              >
+                {notification ? "Updated!" : "Change settings"}
+              </Button>
+            </div>
+          </Stack>
         </Row>
       </Form>
     </>
@@ -395,8 +412,12 @@ function Game() {
   return (
     <>
       <div>
-        <Button onClick={toggleGame} style={{ marginBottom: "3rem" }}>
-          {running ? "Stop" : "Start"}
+        <Button
+          variant={running ? "danger" : "primary"}
+          onClick={toggleGame}
+          style={{ marginBottom: "3rem" }}
+        >
+          {running ? "Stop" : "Start Game"}
         </Button>
         {running && (
           <div className="mb-5">
@@ -414,8 +435,8 @@ function Game() {
 
 function Winner({ winner }) {
   return (
-    <h3>
-      Winner! <div>{winner.name}</div>
+    <h3 className="mb-5">
+      Winner! <div className="strong">{winner.name}</div>
     </h3>
   )
 }
@@ -441,18 +462,18 @@ function PlayerInput() {
 
   return (
     <>
-      {currentPlayer && (
-        <Form
-          onSubmit={submitForm}
-          className="d-flex justify-content-center my-3"
-        >
-          <Form.Control
-            style={{ maxWidth: "30em" }}
-            autoFocus
-            onChange={(e) => debounced(e.target.value)}
-          />
-        </Form>
-      )}
+      <Form
+        onSubmit={submitForm}
+        className="d-flex justify-content-center my-3 flex-column m-auto"
+        style={{ maxWidth: "30em" }}
+      >
+        <Form.Control
+          key={currentPlayer}
+          autoFocus
+          onChange={(e) => debounced(e.target.value)}
+          disabled={!currentPlayer}
+        />
+      </Form>
     </>
   )
 }

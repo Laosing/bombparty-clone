@@ -320,6 +320,7 @@ function connection(io, socket) {
     // handleMessage("left the room")
     console.log({ reason })
     users.delete(userId)
+    stopGame()
     // socket.leave(roomId)
     // socket.disconnect(true)
     relayRoom()
