@@ -155,6 +155,7 @@ function connection(io, socket) {
   function updateSecondsTimer() {
     const { seconds } = updateTimer()
     if (seconds === 0) {
+      io.sockets.in(roomId).emit("boom", true)
       loseLife()
       const hasWinner = checkGameState()
       if (!hasWinner) {
@@ -205,6 +206,7 @@ function connection(io, socket) {
     )
     const hasWinner = remainingPlayers.length === 1
     if (hasWinner) {
+      io.sockets.in(roomId).emit("winner", true)
       const [, winner] = remainingPlayers[0]
       stopGame(winner)
     }
@@ -279,6 +281,7 @@ function connection(io, socket) {
     const { name, userId } = socket.handshake.auth
     const { users } = getRoom()
     users.set(userId, { id: userId, name, letters: new Set() })
+    io.sockets.in(roomId).emit("userJoined", userId)
   }
 
   function setSettings(data) {

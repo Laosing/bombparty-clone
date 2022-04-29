@@ -36,6 +36,15 @@ import {
   Stack,
   ListGroup
 } from "react-bootstrap"
+import { createGlobalState, useAudio } from "react-use"
+import clsx from "clsx"
+
+import soundBoom from "audio/boom.mp3"
+import soundLobby from "audio/lobby-2.m4a"
+import soundValid from "audio/valid.mp3"
+import soundInvalid from "audio/error.mp3"
+import soundJoining from "audio/joining.mp3"
+import soundWinner from "audio/winner.mp3"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -52,17 +61,21 @@ function Header({ children }) {
   return (
     <Navbar bg="dark" variant="dark">
       <Container fluid>
-        <Navbar.Brand>Bombparty-clone</Navbar.Brand>
+        <Navbar.Brand>💣 Bombparty-clone</Navbar.Brand>
         {children}
       </Container>
     </Navbar>
   )
 }
 
+const useSound = createGlobalState(true)
+
 function HeaderUser() {
   const { socket } = useSocket()
   const [name, setName] = useLocalStorage("name")
   const [id] = useLocalStorage("userId")
+  const [sound, setSound] = useSound()
+
   const editName = () => {
     const namePrompt = window.prompt(
       "name: (leaving this blank will generate a random name)"
@@ -74,12 +87,23 @@ function HeaderUser() {
     }
   }
 
+  const toggleSound = () => setSound(!sound)
+
   return (
     <Navbar.Text className="d-flex align-items-center p-0">
-      Signed in as: <span className="text-white me-3 ms-1">{name}</span>
-      <Button onClick={editName} size="sm" variant="outline-light">
-        Change name
-      </Button>
+      Signed in as: <span className="text-white me-2 ms-1">{name}</span>
+      <Stack direction="horizontal" gap={2}>
+        <Button onClick={editName} size="sm" variant="outline-light">
+          ✏️
+        </Button>
+        <Button
+          onClick={toggleSound}
+          size="sm"
+          variant={sound ? "light" : "outline-light"}
+        >
+          🎵
+        </Button>
+      </Stack>
     </Navbar.Text>
   )
 }
@@ -316,7 +340,7 @@ function HeartLetters() {
           disabled
           key={letter}
           variant={userLetters.includes(letter) ? "dark" : "outline-dark"}
-          className={`me-1`}
+          className={`me-1 mb-1`}
         >
           {letter.toUpperCase()}
         </Button>
@@ -403,7 +427,7 @@ function GameSettings() {
             <div className="d-flex align-items-end">
               <Button
                 type="submit"
-                variant={notification ? "success" : "dark"}
+                variant={notification ? "success" : "secondary"}
                 className="w-100"
                 disabled={running}
               >
@@ -420,6 +444,14 @@ function GameSettings() {
 function Game() {
   const { socket } = useSocket()
   const { room } = useRoom()
+  const [sound] = useSound()
+
+  const [audioLobby, , lobbyControls] = useAudio({
+    src: soundLobby,
+    autoPlay: true,
+    preload: "auto",
+    loop: true
+  })
 
   const letterBlend = room.get("letterBlend")
   const timer = room.get("timer")
@@ -436,13 +468,23 @@ function Game() {
     }
   }
 
+  useEffect(() => {
+    if (sound) {
+      lobbyControls.play()
+    } else {
+      lobbyControls.pause()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sound])
+
   return (
     <>
+      {audioLobby}
       <div className="mb-4">
         <Button
           variant={running ? "danger" : "primary"}
           onClick={toggleGame}
-          style={{ marginBottom: "3rem" }}
+          className="mb-5"
         >
           {running ? "Stop" : "Start Game"}
         </Button>
@@ -466,7 +508,7 @@ function Game() {
 function Winner({ winner }) {
   return (
     <h3 className="mb-5">
-      Winner! <div className="strong">{winner.name}</div>
+      Winner! <div className="display-3">{winner.name}</div>
     </h3>
   )
 }
@@ -495,7 +537,7 @@ function PlayerInput() {
       <Form
         onSubmit={submitForm}
         className="d-flex justify-content-center my-3 flex-column m-auto"
-        style={{ maxWidth: "30em" }}
+        style={{ maxWidth: "20em" }}
       >
         <Form.Control
           key={currentPlayer}
@@ -517,45 +559,88 @@ function Players() {
 
   const [validation, setValidation] = useState("")
 
+  const [validAudio, , validControls] = useAudio({
+    src: soundValid,
+    preload: "auto"
+  })
+  const [invalidAudio, , invalidControls] = useAudio({
+    src: soundInvalid,
+    preload: "auto"
+  })
+  const [boomAudio, , boomControls] = useAudio({
+    src: soundBoom,
+    preload: "auto"
+  })
+  const [winnerAudio, , winnerControls] = useAudio({
+    src: soundWinner,
+    preload: "auto"
+  })
+  const [userJoinedAudio, , userJoinedControls] = useAudio({
+    src: soundJoining,
+    preload: "auto"
+  })
+
   useEffect(() => {
     const triggerValidation = (val) => {
       setValidation(val)
+      if (val === "valid") {
+        validControls.play()
+      } else {
+        invalidControls.play()
+      }
       setTimeout(() => setValidation(""), 200)
     }
 
+    const triggerBoom = () => boomControls.play()
+    const triggerUserJoined = () => userJoinedControls.play()
+    const triggerWinner = () => winnerControls.play()
+
+    socket.on("userJoined", triggerUserJoined)
+    socket.on("winner", triggerWinner)
+    socket.on("boom", triggerBoom)
     socket.on("wordValidation", triggerValidation)
     return () => {
+      socket.off("boom", triggerBoom)
       socket.off("wordValidation", triggerValidation)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket])
 
   const color =
     validation === "invalid"
-      ? "red"
+      ? "text-danger"
       : validation === "valid"
-      ? "green"
+      ? "text-success"
       : "initial"
 
   return (
     <div>
+      {validAudio}
+      {invalidAudio}
+      {winnerAudio}
+      {boomAudio}
+      {userJoinedAudio}
       <h5>Players</h5>
       {Array.from(players).map(([key, value]) => (
-        <div key={key}>
+        <Stack
+          direction="horizontal"
+          gap={2}
+          key={key}
+          className="justify-content-center"
+        >
           <span
+            className={clsx(key === currentPlayer ? "fw-bold" : "initial")}
             style={{
-              color: key === currentPlayer ? color : "initial",
-              display: "inline-block",
-              marginRight: "1rem",
-              fontWeight: key === currentPlayer ? "bold" : "initial"
+              color: key === currentPlayer ? color : "initial"
             }}
           >
-            {value?.name}{" "}
-            <span style={{ color: "red" }}>
-              {running ? new Array(Number(value?.lives)).fill("❤") : ""}
-            </span>
+            {key === currentPlayer ? "💣 " : ""} {value?.name}
+          </span>
+          <span className="text-danger">
+            {running ? new Array(Number(value?.lives)).fill("❤") : ""}
           </span>
           {running && <span>{value?.text}</span>}
-        </div>
+        </Stack>
       ))}
     </div>
   )
