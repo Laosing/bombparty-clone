@@ -23,19 +23,19 @@ function Messages() {
 
   return (
     <>
-      <div className="overflow-auto" style={{ flex: "1 1 0" }}>
+      <div className="overflow-auto" style={{ flex: "1 1 10em" }}>
         <ListGroup className="mt-auto">
           {[...messages]
             .sort((a, b) => a.time - b.time)
             .map((message) => (
               <ListGroupItem key={message.id}>
-                <span>
-                  <small>{new Date(message.time).toLocaleTimeString()}</small>
-                  {" : "}
-                  {message.user.name}
-                  {" - "}
-                </span>
-                <span>{message.value}</span>
+                <div className="d-flex justify-content-between small">
+                  <strong>{message.user.name}</strong>
+                  <small className="text-muted">
+                    {new Date(message.time).toLocaleTimeString()}
+                  </small>
+                </div>
+                <span className="text-secondary">{message.value}</span>
               </ListGroupItem>
             ))}
           <div ref={ref}></div>

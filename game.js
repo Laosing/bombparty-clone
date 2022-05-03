@@ -43,6 +43,7 @@ function connection(io, socket) {
   socket.on("switchPlayer", () => switchPlayer())
   socket.on("getRoom", () => relayRoom())
   socket.on("updateName", (value, userId) => updateName(value, userId))
+  socket.on("updateAvatar", (userId) => updateAvatar(userId))
   socket.on("message", (value) => handleMessage(value))
   socket.on("disconnect", (reason) => disconnect(reason))
   socket.on("connect_error", (err) => {
@@ -67,6 +68,13 @@ function connection(io, socket) {
     relayRoom()
   }
 
+  function updateAvatar(userId) {
+    const { users } = getRoom()
+    const player = users.get(userId)
+    users.set(userId, { ...player, avatar: nanoid() })
+    relayRoom()
+  }
+
   function setUserLetters(value, userId) {
     const { users } = getRoom()
     const user = users.get(userId)
@@ -82,7 +90,7 @@ function connection(io, socket) {
     const { roomId, room, letterBlend, words, currentPlayer } = getRoom()
 
     const isBlend = value.includes(letterBlend.toLowerCase())
-    const isDictionary = dictionary[value]
+    const isDictionary = !!dictionary[value]
     const isUnique = !words.has(value)
     const isLongEnough = value.length >= 3
     const isCurrentPlayer = currentPlayer === userId
@@ -97,9 +105,14 @@ function connection(io, socket) {
       console.log(`valid word: ${value}`)
       io.sockets
         .in(roomId)
-        .emit("wordValidation", "valid", JSON.stringify({ value, letterBlend }))
+        .emit(
+          "wordValidation",
+          true,
+          JSON.stringify({ value, letterBlend, currentPlayer })
+        )
       words.add(value)
       setUserLetters(value, userId)
+      resetletterBlendCounter()
       room.set("letterBlend", getRandomLetters())
       timer.reset()
       switchPlayer()
@@ -107,12 +120,13 @@ function connection(io, socket) {
       console.log(`invalid word: ${value}`)
       io.sockets.in(roomId).emit(
         "wordValidation",
-        "invalid",
+        false,
         JSON.stringify({
           isBlend,
           isDictionary,
           isUnique,
-          isLongEnough
+          isLongEnough,
+          currentPlayer
         })
       )
       setPlayerText("", userId, false)
@@ -122,11 +136,11 @@ function connection(io, socket) {
 
   function switchPlayer() {
     const { room, users, currentPlayer } = getRoom()
-    if (!currentPlayer) {
-      room.set("currentPlayer", getRandomKey(users))
-    } else {
-      room.set("currentPlayer", getNextPlayer(users))
-    }
+    const nextPlayer = !currentPlayer
+      ? getRandomKey(users)
+      : getNextPlayer(users)
+    room.set("currentPlayer", nextPlayer)
+    setPlayerText("", nextPlayer, false)
   }
 
   function loseLife() {
@@ -167,6 +181,12 @@ function connection(io, socket) {
     relayRoom()
   }
 
+  function resetletterBlendCounter() {
+    const { room, settings } = getRoom()
+    const settingsLetterBlendCounter = settings.get("letterBlendCounter")
+    room.set("letterBlendCounter", settingsLetterBlendCounter)
+  }
+
   function decrementletterBlendCounter() {
     const { room, letterBlendCounter, settings } = getRoom()
     const counter = letterBlendCounter - 1
@@ -181,12 +201,11 @@ function connection(io, socket) {
   function startGame() {
     const { room, settings } = getRoom()
     const startTimer = settings.get("timer")
-    const letterBlendCounter = settings.get("letterBlendCounter")
     room.set("timer", startTimer)
-    room.set("letterBlendCounter", letterBlendCounter)
     room.set("running", true)
     room.set("letterBlend", getRandomLetters())
     room.set("words", new Set())
+    resetletterBlendCounter()
     resetUser()
     switchPlayer()
 
@@ -204,10 +223,10 @@ function connection(io, socket) {
     const remainingPlayers = Array.from(users).filter(([, value]) =>
       Boolean(value.lives)
     )
-    const hasWinner = remainingPlayers.length === 1
+    const hasWinner = remainingPlayers.length <= 1
     if (hasWinner) {
       io.sockets.in(roomId).emit("winner", true)
-      const [, winner] = remainingPlayers[0]
+      const [, winner] = remainingPlayers?.[0] || [...users][0]
       stopGame(winner)
     }
     return hasWinner
@@ -245,7 +264,7 @@ function connection(io, socket) {
     const nextIndex = [-1, remainingPlayers.length - 1].includes(currentIndex)
       ? 0
       : currentIndex + 1
-    return remainingPlayers[nextIndex][0]
+    return remainingPlayers[nextIndex]?.[0] || [...collection][0]
   }
 
   function getRandomKey(collection) {
@@ -280,7 +299,12 @@ function connection(io, socket) {
   function initializeUser() {
     const { name, userId } = socket.handshake.auth
     const { users } = getRoom()
-    users.set(userId, { id: userId, name, letters: new Set() })
+    users.set(userId, {
+      id: userId,
+      name,
+      letters: new Set(),
+      avatar: nanoid()
+    })
     io.sockets.in(roomId).emit("userJoined", userId)
   }
 
