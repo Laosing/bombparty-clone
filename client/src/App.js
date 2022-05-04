@@ -792,16 +792,21 @@ function Players() {
             className={clsx(
               "position-relative",
               "list-group-item",
+              running &&
+                value.lives === 0 &&
+                "list-group-item-secondary text-decoration-line-through",
               id === currentPlayer && "list-group-item-primary"
             )}
           >
-            <span>
-              <Avatar
-                className="position-absolute top-50 start-0"
-                style={{ width: "35px", transform: `translate(-120%, -50%)` }}
-                id={value.avatar}
-              />
+            <span
+              className="position-absolute top-50 start-0"
+              style={{ width: "35px", transform: `translate(-120%, -50%)` }}
+            >
+              {!running && <Avatar id={value.avatar} />}
+              {running &&
+                (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
             </span>
+
             <span
               className={clsx(
                 id === currentPlayer && "fw-bold",

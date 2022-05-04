@@ -255,16 +255,20 @@ function connection(io, socket) {
 
   function getNextPlayer(collection) {
     const { currentPlayer } = getRoom()
-    const remainingPlayers = [...collection].filter(([, val]) =>
-      Boolean(val.lives)
-    )
-    const currentIndex = remainingPlayers.findIndex(
-      ([key]) => key === currentPlayer
-    )
-    const nextIndex = [-1, remainingPlayers.length - 1].includes(currentIndex)
-      ? 0
-      : currentIndex + 1
-    return remainingPlayers[nextIndex]?.[0] || [...collection][0]
+
+    const players = [...collection]
+    let currentIndex = players.findIndex(([key]) => key === currentPlayer)
+    if (currentIndex === players.length - 1) currentIndex = 0
+
+    let nextPlayerId
+    for (let i = currentIndex; i < players.length; i++) {
+      const [id, val] = players[i]
+      if (val.lives === 0 || id === currentPlayer) continue
+      nextPlayerId = id
+      break
+    }
+
+    return nextPlayerId
   }
 
   function getRandomKey(collection) {
