@@ -260,7 +260,7 @@ function connection(io, socket) {
     let currentIndex = players.findIndex(([key]) => key === currentPlayer)
     if (currentIndex === players.length - 1) currentIndex = 0
 
-    let nextPlayerId
+    let nextPlayerId = currentPlayer
     for (let i = currentIndex; i < players.length; i++) {
       const [id, val] = players[i]
       if (val.lives === 0 || id === currentPlayer) continue

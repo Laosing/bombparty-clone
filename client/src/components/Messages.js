@@ -16,10 +16,11 @@ function Messages() {
   const messages = room.get("messages")
   const ref = React.useRef()
 
-  React.useEffect(
-    () => ref?.current?.scrollIntoView({ behavior: "smooth" }),
-    [messages.size]
-  )
+  React.useEffect(() => {
+    if (messages.size > 3) {
+      ref?.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages.size])
 
   return (
     <>

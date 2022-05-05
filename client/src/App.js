@@ -36,7 +36,8 @@ import {
   Row,
   Col,
   Stack,
-  ListGroup
+  ListGroup,
+  Alert
 } from "react-bootstrap"
 import clsx from "clsx"
 
@@ -53,6 +54,8 @@ import shallow from "zustand/shallow"
 import { Howl } from "howler"
 import { createAvatar } from "@dicebear/avatars"
 import * as avatarStyle from "@dicebear/big-smile"
+import { useInterval } from "functions/hooks"
+import { JellyTriangle } from "@uiball/loaders"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -111,10 +114,11 @@ function HeaderUser() {
 
   const editName = () => {
     const namePrompt = window.prompt(
-      "name: (leaving this blank will generate a random name)"
+      "Name: (over 30 characters or blank will generate a random name)"
     )
     if (namePrompt !== null) {
-      const newName = namePrompt ? namePrompt.trim() : getRandomName()
+      const validName = namePrompt.trim().length < 30 && namePrompt.trim()
+      const newName = validName ? namePrompt.trim() : getRandomName()
       setName(newName)
       socket.emit("updateName", newName, userId)
     }
@@ -172,8 +176,6 @@ function App() {
 }
 
 const Router = () => {
-  // useLocalStorage("userId", nanoid())
-
   return (
     <BrowserRouter>
       <Routes>
@@ -186,15 +188,19 @@ const Router = () => {
   )
 }
 
-const LayoutWithHeader = ({ children }) => (
+const LayoutWithHeader = ({ children, ...props }) => (
   <>
     <Header />
-    <Layout>{children}</Layout>
+    <Layout {...props}>{children}</Layout>
   </>
 )
 
-const Layout = ({ children }) => {
-  return <Container className="my-5 text-center">{children}</Container>
+const Layout = ({ children, className, ...props }) => {
+  return (
+    <Container className={clsx("my-5 text-center", className)} {...props}>
+      {children}
+    </Container>
+  )
 }
 
 const Home = () => {
@@ -210,17 +216,17 @@ const Home = () => {
     <LayoutWithHeader>
       <h1 className="display-3">Welcome to 💣party!</h1>
       <p className="mb-5">Create or join a room to get started</p>
-      <Button as={Link} to={getRoomId()} className="mb-4">
+      <Button size="lg" as={Link} to={getRoomId()} className="mb-4">
         Create room
       </Button>
-      <Form
-        onSubmit={onSubmit}
-        style={{ maxWidth: "500px" }}
-        className="m-auto"
-      >
-        <InputGroup className="mb-3">
-          <InputGroup.Text>Room ID</InputGroup.Text>
-          <FormControl name="room" style={{ textTransform: "uppercase" }} />
+      <Form onSubmit={onSubmit} className="mb-5">
+        <Form.Label>Know an existing room? Enter it here!</Form.Label>
+        <InputGroup className="w-auto justify-content-center">
+          <FormControl
+            className="text-uppercase"
+            name="room"
+            style={{ maxWidth: "120px" }}
+          />
           <Button type="submit" variant="outline-secondary">
             Join
           </Button>
@@ -229,6 +235,18 @@ const Home = () => {
     </LayoutWithHeader>
   )
 }
+
+const Rules = ({ className }) => (
+  <Alert style={{ maxWidth: "20em" }} className={clsx("mx-auto", className)}>
+    <h5>🧐 Rules</h5>
+    <p className="mx-auto small">
+      On a player's turn they must type a word containing the given letters in
+      order before the bomb explodes (example: LU - BLUE). If a player does not
+      type a word in time, they lose a life. The last player remaining wins the
+      game.
+    </p>
+  </Alert>
+)
 
 function ValidateRoom() {
   const { roomId } = useParams()
@@ -324,18 +342,34 @@ function InitializeRoom() {
     }
   }, [socket])
 
+  const isLoadingStuck = !room || !room.get("users").has(userId)
+  useInterval(
+    () => {
+      if (isLoadingStuck) {
+        window.location.reload()
+      }
+    },
+    isLoadingStuck ? 5000 : null
+  )
+
   if (!room) {
     return (
-      <LayoutWithHeader>
-        <h1 className="h3">initializing room</h1>
+      <LayoutWithHeader className="d-flex align-items-center justify-content-center flex-column gap-3">
+        <h1 className="h3">Initializing room</h1>
+        <JellyTriangle size={60} speed={1} color="var(--bs-primary)" />
       </LayoutWithHeader>
     )
   }
 
   if (!room.get("users").has(userId)) {
     return (
-      <LayoutWithHeader>
+      <LayoutWithHeader className="d-flex align-items-center justify-content-center flex-column gap-3">
         <h1 className="h3">Disconnected!</h1>
+        <JellyTriangle size={60} speed={1} color="var(--bs-primary)" />
+        <p>
+          Hold on! We're trying to get you back on track. If this page is stuck
+          try <Link to="/">rejoining a different room</Link>
+        </p>
       </LayoutWithHeader>
     )
   }
@@ -350,11 +384,9 @@ function InitializeRoom() {
 function Room() {
   const { roomId } = useRoom()
 
-  console.log("room?")
-
   return (
     <>
-      <Header>{/* <HeaderUser /> */}</Header>
+      <Header />
       <Container fluid className="d-flex flex-grow-1">
         <Row className="flex-grow-1">
           <Col md={8}>
@@ -381,11 +413,11 @@ function Room() {
                 </Button>
               </ListGroup.Item>
             </ListGroup>
-            <hr className="m-0" />
+            <Hr />
             <AudioSettings />
-            <hr className="m-0" />
+            <Hr />
             <GameSettings />
-            <hr className="m-0" />
+            <Hr />
             <MessagesWrapper />
           </Col>
         </Row>
@@ -393,6 +425,10 @@ function Room() {
     </>
   )
 }
+
+const Hr = () => (
+  <hr className="m-0" style={{ backgroundColor: "var(--bs-gray-600)" }} />
+)
 
 function AudioSettings() {
   const [music, toggleMusic] = useSoundStore((store) => [
@@ -486,46 +522,60 @@ function GameSettings() {
     }
   }, [socket])
 
+  const [timerValue, setTimerValue] = useState(timer)
+  const [livesValue, setLivesValue] = useState(lives)
+  const [lettersValue, setLettersValue] = useState(letterBlendCounter)
+
   return (
     <>
       <Form onSubmit={submitForm} className="p-3">
         <Row>
           <Stack gap={3}>
             <Form.Group controlId="timer">
-              <Form.Label>Timer</Form.Label>
-              <Form.Control
+              <Form.Label>
+                Timer: <strong>{timerValue}s</strong>
+              </Form.Label>
+              <Form.Range
                 key={String(timer)}
-                type="number"
                 name="timer"
                 defaultValue={String(timer)}
                 min="1"
                 max="60"
                 step="1"
                 disabled={running}
+                onChange={(e) => setTimerValue(e.target.value)}
               />
             </Form.Group>
             <Form.Group controlId="lives">
-              <Form.Label>Lives</Form.Label>
-              <Form.Control
+              <Form.Label>
+                Lives: <strong>{livesValue}</strong>
+              </Form.Label>
+              <Form.Range
                 key={lives}
                 type="number"
                 name="lives"
                 defaultValue={lives}
                 min="1"
+                max="10"
                 step="1"
                 disabled={running}
+                onChange={(e) => setLivesValue(e.target.value)}
               />
             </Form.Group>
             <Form.Group controlId="letterBlendCounter">
-              <Form.Label>Change letters after # turns</Form.Label>
-              <Form.Control
+              <Form.Label>
+                Change letters after <strong>{lettersValue}</strong> turns
+              </Form.Label>
+              <Form.Range
                 key={letterBlendCounter}
                 type="number"
                 name="letterBlendCounter"
                 defaultValue={letterBlendCounter}
                 min="1"
+                max="10"
                 step="1"
                 disabled={running}
+                onChange={(e) => setLettersValue(e.target.value)}
               />
             </Form.Group>
             <div className="d-flex align-items-end">
@@ -604,6 +654,7 @@ function Game() {
         >
           {running ? "Stop" : "Start Game"}
         </Button>
+        {!running && !winner && <Rules />}
         <div>
           <HeartLetters />
         </div>
@@ -663,7 +714,7 @@ function PlayerInput() {
 
   const [value, setValue] = useState("")
 
-  const validation = useWordValidation()
+  const validation = useWordValidation(500)
 
   const users = room.get("users")
   const currentPlayer = room.get("currentPlayer")
@@ -694,13 +745,15 @@ function PlayerInput() {
       ? "Already used!"
       : validation.isDictionary === false
       ? "Not in my dictionary!"
-      : " "
+      : validation.isBlend === false
+      ? "Missing the letters above"
+      : ""
 
   return (
     <>
       <Form
         onSubmit={submitForm}
-        className="d-flex justify-content-center my-3 flex-column m-auto"
+        className="d-flex justify-content-center mt-3 mb-4 flex-column m-auto position-relative"
         style={{ maxWidth: "20em" }}
       >
         <Form.Control
@@ -711,7 +764,12 @@ function PlayerInput() {
           disabled={!isCurrentPlayer}
           {...(!isCurrentPlayer && { value: currentRoomPlayer.text })}
         />
-        <Form.Text className="text-danger">{errorReason}</Form.Text>
+        <Form.Text
+          className="text-danger fw-bold position-absolute top-100 start-50 w-100"
+          style={{ transform: "translate(-50%, 7%)" }}
+        >
+          {errorReason}
+        </Form.Text>
       </Form>
     </>
   )

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef, useLayoutEffect } from "react"
 
 export function useLocalStorage(key, initialValue = "") {
   // State to store our value
@@ -41,3 +41,26 @@ export function useLocalStorage(key, initialValue = "") {
   }
   return [storedValue, setValue]
 }
+
+export function useInterval(callback, delay) {
+  const savedCallback = useRef(callback)
+
+  // Remember the latest callback if it changes.
+  useIsomorphicLayoutEffect(() => {
+    savedCallback.current = callback
+  }, [callback])
+
+  // Set up the interval.
+  useEffect(() => {
+    if (!delay && delay !== 0) {
+      return
+    }
+
+    const id = setInterval(() => savedCallback.current(), delay)
+
+    return () => clearInterval(id)
+  }, [delay])
+}
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect
