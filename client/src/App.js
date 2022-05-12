@@ -880,7 +880,7 @@ function Players() {
               {value?.name}
             </span>
             <span className="text-danger">
-              {running ? new Array(Number(value?.lives)).fill("❤") : ""}
+              {running ? new Array(Number(value?.lives || 0)).fill("❤") : ""}
             </span>
             {running && id !== currentPlayer && (
               <span className="ms-auto small">{value?.text}</span>
