@@ -263,7 +263,7 @@ function connection(io, socket) {
     let nextPlayerId
     for (let i = currentIndex; i < players.length; i++) {
       const [id, val] = players[i]
-      if (val.lives === 0 || id === currentPlayer) continue
+      if (val.lives <= 0 || id === currentPlayer) continue
       nextPlayerId = id
       break
     }
