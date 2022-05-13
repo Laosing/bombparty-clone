@@ -5,24 +5,7 @@ const Timer = require("easytimer.js").Timer
 const dictionary = require("./data/wordlist.json")
 const { getRandomLetters } = require("./data/randomLetters")
 
-const timer = new Timer({ countdown: true })
-
 const rooms = new Map()
-
-// async function userHandler(socket, next) {
-//   const { name } = socket.handshake.auth
-//   if (name) {
-//     try {
-//       users.set(socket, {
-//         name
-//       })
-//     } catch (error) {
-//       console.log(error)
-//     }
-//   }
-
-//   next()
-// }
 
 function connection(io, socket) {
   const { roomId } = socket.handshake.query
@@ -35,7 +18,7 @@ function connection(io, socket) {
   initializeUser()
   setSettings()
 
-  socket.on("setSettings", (value) => setSettings(JSON.parse(value)))
+  socket.on("setSettings", (value) => setSettings(value))
   socket.on("checkWord", (value, userId) => checkWord(value, userId))
   socket.on("setPlayerText", (value, userId) => setPlayerText(value, userId))
   socket.on("startGame", () => startGame())
@@ -87,7 +70,14 @@ function connection(io, socket) {
   }
 
   function checkWord(value, userId) {
-    const { roomId, room, letterBlend, words, currentPlayer } = getRoom()
+    const {
+      roomId,
+      room,
+      letterBlend,
+      words,
+      currentPlayer,
+      timerConstructor
+    } = getRoom()
 
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = !!dictionary[value]
@@ -105,30 +95,22 @@ function connection(io, socket) {
       console.log(`valid word: ${value}`)
       io.sockets
         .in(roomId)
-        .emit(
-          "wordValidation",
-          true,
-          JSON.stringify({ value, letterBlend, currentPlayer })
-        )
+        .emit("wordValidation", true, { value, letterBlend, currentPlayer })
       words.add(value)
       setUserLetters(value, userId)
       resetletterBlendCounter()
       room.set("letterBlend", getRandomLetters())
-      timer.reset()
+      timerConstructor.reset()
       switchPlayer()
     } else {
       console.log(`invalid word: ${value}`)
-      io.sockets.in(roomId).emit(
-        "wordValidation",
-        false,
-        JSON.stringify({
-          isBlend,
-          isDictionary,
-          isUnique,
-          isLongEnough,
-          currentPlayer
-        })
-      )
+      io.sockets.in(roomId).emit("wordValidation", false, {
+        isBlend,
+        isDictionary,
+        isUnique,
+        isLongEnough,
+        currentPlayer
+      })
       setPlayerText("", userId, false)
     }
     relayRoom()
@@ -160,14 +142,14 @@ function connection(io, socket) {
   }
 
   function updateTimer() {
-    const { room } = getRoom()
-    const { seconds } = timer.getTimeValues()
+    const { room, timerConstructor } = getRoom()
+    const { seconds } = timerConstructor.getTimeValues()
     room.set("timer", seconds)
     return { seconds }
   }
 
   function updateSecondsTimer() {
-    const { seconds } = updateTimer()
+    const { seconds, timerConstructor } = updateTimer()
     if (seconds === 0) {
       io.sockets.in(roomId).emit("boom", true)
       loseLife()
@@ -175,7 +157,7 @@ function connection(io, socket) {
       if (!hasWinner) {
         switchPlayer()
         decrementletterBlendCounter()
-        timer.reset()
+        timerConstructor.reset()
       }
     }
     relayRoom()
@@ -199,7 +181,7 @@ function connection(io, socket) {
   }
 
   function startGame() {
-    const { room, settings } = getRoom()
+    const { room, settings, timerConstructor } = getRoom()
     const startTimer = settings.get("timer")
     room.set("timer", startTimer)
     room.set("running", true)
@@ -209,11 +191,11 @@ function connection(io, socket) {
     resetUser()
     switchPlayer()
 
-    timer.start({ startValues: { seconds: startTimer } })
+    timerConstructor.start({ startValues: { seconds: startTimer } })
 
-    timer.on("started", updateTimer)
-    timer.on("reset", updateTimer)
-    timer.on("secondsUpdated", updateSecondsTimer)
+    timerConstructor.on("started", updateTimer)
+    timerConstructor.on("reset", updateTimer)
+    timerConstructor.on("secondsUpdated", updateSecondsTimer)
 
     relayRoom()
   }
@@ -233,9 +215,9 @@ function connection(io, socket) {
   }
 
   function stopGame(player) {
-    const { room } = getRoom()
-    timer.stop()
-    timer.removeAllEventListeners()
+    const { room, timerConstructor } = getRoom()
+    timerConstructor.stop()
+    timerConstructor.removeAllEventListeners()
     room.set("winner", player)
     room.set("running", false)
     room.set("currentPlayer", "")
@@ -292,6 +274,11 @@ function connection(io, socket) {
       users: setProp(room, "users", new Map()),
       words: setProp(room, "words", new Set()),
       letterBlend: setProp(room, "letterBlend", ""),
+      timerConstructor: setProp(
+        room,
+        "timerConstructor",
+        new Timer({ countdown: true })
+      ),
       timer: setProp(room, "timer", 0),
       currentPlayer: setProp(room, "currentPlayer", ""),
       running: setProp(room, "running", false),
@@ -327,7 +314,7 @@ function connection(io, socket) {
       .set("lives", lives)
       .set("letterBlendCounter", letterBlendCounter)
     if (data) {
-      io.sockets.in(roomId).emit("setSettings", true)
+      io.sockets.in(roomId).emit("setSettings", serialize(settings))
       relayRoom()
     }
   }

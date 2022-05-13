@@ -51,7 +51,7 @@ import soundWinner from "audio/winner.mp3"
 import create from "zustand"
 import { persist } from "zustand/middleware"
 import shallow from "zustand/shallow"
-import { Howl } from "howler"
+import { Howl, Howler } from "howler"
 import { createAvatar } from "@dicebear/avatars"
 import * as avatarStyle from "@dicebear/big-smile"
 import { useInterval } from "functions/hooks"
@@ -68,24 +68,15 @@ const getRandomName = () =>
     length: 2
   })
 
-function Header({ children }) {
-  return (
-    <Navbar bg="dark" variant="dark">
-      <Container fluid>
-        <Navbar.Brand className="m-auto">💥💣 Bombparty 💣💥</Navbar.Brand>
-        {children}
-      </Container>
-    </Navbar>
-  )
-}
-
 const useSoundStore = create(
   persist(
     (set, get) => ({
       music: true,
       toggleMusic: () => set({ music: !get().music }),
       soundEffects: true,
-      toggleSoundEffects: () => set({ soundEffects: !get().soundEffects })
+      toggleSoundEffects: () => set({ soundEffects: !get().soundEffects }),
+      volume: 100,
+      setVolume: (val) => set({ volume: val })
     }),
     { name: "sound-settings" }
   )
@@ -102,6 +93,17 @@ const useGameStore = create(
   )
 )
 
+function Header({ children }) {
+  return (
+    <Navbar bg="dark" variant="dark">
+      <Container fluid>
+        <Navbar.Brand className="m-auto">💥💣 Bombparty 💣💥</Navbar.Brand>
+        {children}
+      </Container>
+    </Navbar>
+  )
+}
+
 function HeaderUser() {
   const { socket } = useSocket()
 
@@ -109,8 +111,6 @@ function HeaderUser() {
     (state) => [state.name, state.setName, state.userId],
     shallow
   )
-  // const [name, setName] = useLocalStorage("name")
-  // const [id] = useLocalStorage("userId")
 
   const editName = () => {
     const namePrompt = window.prompt(
@@ -274,8 +274,6 @@ const InitializeSocket = () => {
   const [socket, setSocket] = useState(undefined)
   const name = useGameStore((state) => state.name)
   const userId = useGameStore((state) => state.userId)
-  // const [name] = useLocalStorage("name", getRandomName())
-  // const [userId] = useLocalStorage("userId")
   const hasSocket = socket?.id
 
   console.log({ hasSocket })
@@ -340,7 +338,8 @@ function InitializeRoom() {
     return () => {
       socket.off("getRoom", getRoom)
     }
-  }, [socket])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isLoadingStuck = !room || !room.get("users").has(userId)
   useInterval(
@@ -431,14 +430,28 @@ const Hr = () => (
 )
 
 function AudioSettings() {
-  const [music, toggleMusic] = useSoundStore((store) => [
-    store.music,
-    store.toggleMusic
-  ])
-  const [soundEffects, toggleSoundEffects] = useSoundStore((store) => [
-    store.soundEffects,
-    store.toggleSoundEffects
-  ])
+  const [
+    music,
+    toggleMusic,
+    soundEffects,
+    toggleSoundEffects,
+    volume,
+    setVolume
+  ] = useSoundStore(
+    (store) => [
+      store.music,
+      store.toggleMusic,
+      store.soundEffects,
+      store.toggleSoundEffects,
+      store.volume,
+      store.setVolume
+    ],
+    shallow
+  )
+
+  useEffect(() => {
+    Howler.volume(volume)
+  }, [volume])
 
   return (
     <Form className="p-3">
@@ -453,6 +466,14 @@ function AudioSettings() {
         checked={!!soundEffects}
         onChange={toggleSoundEffects}
         label="Sound effects"
+      />
+      <Form.Label className="mt-2 mb-0">Volume</Form.Label>
+      <Form.Range
+        defaultValue={volume}
+        min="0"
+        max="1"
+        step=".1"
+        onChange={(e) => setVolume(e.target.value)}
       />
     </Form>
   )
@@ -505,14 +526,22 @@ function GameSettings() {
     const timer = formData.get("timer")
     const letterBlendCounter = formData.get("letterBlendCounter")
     const data = { lives, timer, letterBlendCounter }
-    socket.emit("setSettings", JSON.stringify(data))
+    socket.emit("setSettings", data)
   }
 
   const [notification, setNotification] = useState(false)
 
+  const [timerValue, setTimerValue] = useState(timer)
+  const [livesValue, setLivesValue] = useState(lives)
+  const [lettersValue, setLettersValue] = useState(letterBlendCounter)
+
   useEffect(() => {
     const triggerValidation = (val) => {
-      setNotification(val)
+      val = deserialize(val)
+      setTimerValue(val.get("timer"))
+      setLivesValue(val.get("lives"))
+      setLettersValue(val.get("letterBlendCounter"))
+      setNotification(Boolean(val))
       setTimeout(() => setNotification(false), 500)
     }
 
@@ -520,11 +549,8 @@ function GameSettings() {
     return () => {
       socket.off("setSettings", triggerValidation)
     }
-  }, [socket])
-
-  const [timerValue, setTimerValue] = useState(timer)
-  const [livesValue, setLivesValue] = useState(lives)
-  const [lettersValue, setLettersValue] = useState(letterBlendCounter)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <>
@@ -532,26 +558,26 @@ function GameSettings() {
         <Row>
           <Stack gap={3}>
             <Form.Group controlId="timer">
-              <Form.Label>
+              <Form.Label className="mb-0">
                 Timer: <strong>{timerValue}s</strong>
               </Form.Label>
               <Form.Range
-                key={String(timer)}
+                key={`form-${timer}`}
                 name="timer"
                 defaultValue={String(timer)}
                 min="1"
-                max="60"
+                max="59"
                 step="1"
                 disabled={running}
                 onChange={(e) => setTimerValue(e.target.value)}
               />
             </Form.Group>
             <Form.Group controlId="lives">
-              <Form.Label>
+              <Form.Label className="mb-0">
                 Lives: <strong>{livesValue}</strong>
               </Form.Label>
               <Form.Range
-                key={lives}
+                key={`form-${lives}`}
                 type="number"
                 name="lives"
                 defaultValue={lives}
@@ -563,11 +589,11 @@ function GameSettings() {
               />
             </Form.Group>
             <Form.Group controlId="letterBlendCounter">
-              <Form.Label>
+              <Form.Label className="mb-0">
                 Change letters after <strong>{lettersValue}</strong> turns
               </Form.Label>
               <Form.Range
-                key={letterBlendCounter}
+                key={`form-${letterBlendCounter}`}
                 type="number"
                 name="letterBlendCounter"
                 defaultValue={letterBlendCounter}
@@ -693,7 +719,7 @@ function useWordValidation(timeout = 300, callback) {
 
   useEffect(() => {
     const triggerValidation = (isValid, data) => {
-      setValidation({ isValid, ...JSON.parse(data) })
+      setValidation({ isValid, ...data })
       typeof callback === "function" && callback(isValid)
       setTimeout(() => setValidation({}), timeout)
     }
@@ -703,7 +729,7 @@ function useWordValidation(timeout = 300, callback) {
       socket.off("wordValidation", triggerValidation)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, timeout])
+  }, [])
 
   return validation
 }
@@ -826,10 +852,12 @@ function Players() {
     socket.on("winner", triggerWinner)
     socket.on("boom", triggerBoom)
     return () => {
+      socket.off("userJoined", triggerUserJoined)
+      socket.off("winner", triggerWinner)
       socket.off("boom", triggerBoom)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket])
+  }, [])
 
   const textColor =
     validation.isValid === false
