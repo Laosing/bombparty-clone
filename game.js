@@ -145,7 +145,7 @@ function connection(io, socket) {
     const { room, timerConstructor } = getRoom()
     const { seconds } = timerConstructor.getTimeValues()
     room.set("timer", seconds)
-    return { seconds }
+    return { seconds, timerConstructor }
   }
 
   function updateSecondsTimer() {
