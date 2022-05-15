@@ -141,6 +141,24 @@ function connection(io, socket) {
     relay && relayRoom()
   }
 
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+
+  function resetTimer() {
+    const { room, timerConstructor, hardMode, settings } = getRoom()
+    if (hardMode) {
+      const settingsTimer = settings.get("timer")
+      const num = getRandomInt(0, Math.ceil(settingsTimer / 2))
+      const seconds = settingsTimer - num
+      timerConstructor.stop()
+      timerConstructor.start({ startValues: { seconds } })
+      room.set("timer", seconds)
+    } else {
+      updateTimer()
+    }
+  }
+
   function updateTimer() {
     const { room, timerConstructor } = getRoom()
     const { seconds } = timerConstructor.getTimeValues()
@@ -183,10 +201,13 @@ function connection(io, socket) {
   function startGame() {
     const { room, settings, timerConstructor } = getRoom()
     const startTimer = settings.get("timer")
-    room.set("timer", startTimer)
-    room.set("running", true)
-    room.set("letterBlend", getRandomLetters())
-    room.set("words", new Set())
+    room
+      .set("timer", startTimer)
+      .set("running", true)
+      .set("letterBlend", getRandomLetters())
+      .set("words", new Set())
+      .set("round", 1)
+      .set("hardMode", false)
     resetletterBlendCounter()
     resetUser()
     switchPlayer()
@@ -194,7 +215,7 @@ function connection(io, socket) {
     timerConstructor.start({ startValues: { seconds: startTimer } })
 
     timerConstructor.on("started", updateTimer)
-    timerConstructor.on("reset", updateTimer)
+    timerConstructor.on("reset", resetTimer)
     timerConstructor.on("secondsUpdated", updateSecondsTimer)
 
     relayRoom()
@@ -202,8 +223,8 @@ function connection(io, socket) {
 
   function checkGameState() {
     const { users } = getRoom()
-    const remainingPlayers = Array.from(users).filter(([, value]) =>
-      Boolean(value.lives)
+    const remainingPlayers = Array.from(users).filter(
+      ([, value]) => value.lives > 0
     )
     const hasWinner = remainingPlayers.length <= 1
     if (hasWinner) {
@@ -218,11 +239,11 @@ function connection(io, socket) {
     const { room, timerConstructor } = getRoom()
     timerConstructor.stop()
     timerConstructor.removeAllEventListeners()
-    room.set("winner", player)
-    room.set("running", false)
-    room.set("currentPlayer", "")
-    room.set("letterBlend", "")
-    // resetUser()
+    room
+      .set("winner", player)
+      .set("running", false)
+      .set("currentPlayer", "")
+      .set("letterBlend", "")
     relayRoom()
   }
 
@@ -235,12 +256,26 @@ function connection(io, socket) {
     room.set("users", new Map(updatedUsers))
   }
 
+  function incrementRound() {
+    const { room, round, settings } = getRoom()
+    const hardMode = settings.get("hardMode")
+    const newRound = round + 1
+    if (newRound > hardMode) {
+      room.set("hardMode", true)
+    }
+    room.set("round", newRound)
+  }
+
   function getNextPlayer(collection) {
     const { currentPlayer } = getRoom()
 
     const players = [...collection]
     let currentIndex = players.findIndex(([key]) => key === currentPlayer)
-    if (currentIndex === players.length - 1) currentIndex = 0
+
+    if (currentIndex === players.length - 1) {
+      incrementRound()
+      currentIndex = 0
+    }
 
     let nextPlayerId
     for (let i = currentIndex; i < players.length; i++) {
@@ -261,30 +296,29 @@ function connection(io, socket) {
     return keys[Math.floor(Math.random() * keys.length)]
   }
 
-  function setProp(room, prop, initialValue) {
-    return room.get(prop) || room.set(prop, initialValue).get(prop)
-  }
-
   function getRoom() {
-    // console.log(rooms)
     const { roomId } = socket.handshake.query
     const room = rooms.get(roomId) || rooms.set(roomId, new Map())
+    const setProp = (prop, initialValue) =>
+      room.get(prop) || room.set(prop, initialValue).get(prop)
+
     const props = {
-      messages: setProp(room, "messages", new Set()),
-      users: setProp(room, "users", new Map()),
-      words: setProp(room, "words", new Set()),
-      letterBlend: setProp(room, "letterBlend", ""),
+      messages: setProp("messages", new Set()),
+      users: setProp("users", new Map()),
+      words: setProp("words", new Set()),
+      letterBlend: setProp("letterBlend", ""),
       timerConstructor: setProp(
-        room,
         "timerConstructor",
         new Timer({ countdown: true })
       ),
-      timer: setProp(room, "timer", 0),
-      currentPlayer: setProp(room, "currentPlayer", ""),
-      running: setProp(room, "running", false),
-      winner: setProp(room, "winner", null),
-      letterBlendCounter: setProp(room, "letterBlendCounter", 0),
-      settings: setProp(room, "settings", new Map())
+      timer: setProp("timer", 0),
+      round: setProp("round", 1),
+      hardMode: setProp("hardMode", false),
+      currentPlayer: setProp("currentPlayer", ""),
+      running: setProp("running", false),
+      winner: setProp("winner", null),
+      letterBlendCounter: setProp("letterBlendCounter", 0),
+      settings: setProp("settings", new Map())
     }
 
     return { room, roomId, ...props }
@@ -307,11 +341,13 @@ function connection(io, socket) {
 
     const timer = data?.timer || settings.get("timer") || 10
     const lives = data?.lives || settings.get("lives") || 2
+    const hardMode = data?.hardMode || settings.get("hardMode") || 5
     const letterBlendCounter =
       data?.letterBlendCounter || settings.get("letterBlendCounter") || 2
     settings
       .set("timer", Number(timer))
       .set("lives", lives)
+      .set("hardMode", hardMode)
       .set("letterBlendCounter", letterBlendCounter)
     if (data) {
       io.sockets.in(roomId).emit("setSettings", serialize(settings))
@@ -342,7 +378,6 @@ function connection(io, socket) {
   function disconnect(reason) {
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
-    // handleMessage("left the room")
     console.log({ reason })
     users.delete(userId)
     stopGame()

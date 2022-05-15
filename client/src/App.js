@@ -3,6 +3,7 @@ import io from "socket.io-client"
 
 import "./App.scss"
 import "animate.css"
+import "csshake/dist/csshake-little.min.css"
 
 import {
   BrowserRouter,
@@ -37,7 +38,9 @@ import {
   Col,
   Stack,
   ListGroup,
-  Alert
+  Alert,
+  OverlayTrigger,
+  Tooltip
 } from "react-bootstrap"
 import clsx from "clsx"
 
@@ -47,6 +50,8 @@ import soundValid from "audio/valid.mp3"
 import soundInvalid from "audio/error.mp3"
 import soundJoining from "audio/joining.mp3"
 import soundWinner from "audio/winner.mp3"
+
+import { ReactComponent as Bombsvg } from "images/bomb.svg"
 
 import create from "zustand"
 import { persist } from "zustand/middleware"
@@ -237,13 +242,13 @@ const Home = () => {
 }
 
 const Rules = ({ className }) => (
-  <Alert style={{ maxWidth: "20em" }} className={clsx("mx-auto", className)}>
+  <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
     <h5>🧐 Rules</h5>
-    <p className="mx-auto small">
-      On a player's turn they must type a word containing the given letters in
-      order before the bomb explodes (example: LU - BLUE). If a player does not
-      type a word in time, they lose a life. The last player remaining wins the
-      game.
+    <p className="mx-auto small mb-0">
+      On a player's turn they must type a word (more than 2 characters)
+      containing the given letters in order before the bomb explodes (example:
+      LU - BLUE). If a player does not type a word in time, they lose a life.
+      The last player remaining wins the game.
     </p>
   </Alert>
 )
@@ -492,7 +497,7 @@ function HeartLetters() {
   }
 
   return (
-    <>
+    <div>
       {[...letters].map((letter) => (
         <Button
           as={"span"}
@@ -505,7 +510,7 @@ function HeartLetters() {
         </Button>
       ))}
       <div className="small">Use all the letters to gain a heart</div>
-    </>
+    </div>
   )
 }
 
@@ -518,6 +523,7 @@ function GameSettings() {
   const lives = settings.get("lives")
   const timer = settings.get("timer")
   const letterBlendCounter = settings.get("letterBlendCounter")
+  const hardMode = settings.get("hardMode")
 
   const submitForm = (e) => {
     e.preventDefault()
@@ -525,7 +531,8 @@ function GameSettings() {
     const lives = formData.get("lives")
     const timer = formData.get("timer")
     const letterBlendCounter = formData.get("letterBlendCounter")
-    const data = { lives, timer, letterBlendCounter }
+    const hardMode = formData.get("hardMode")
+    const data = { lives, timer, letterBlendCounter, hardMode }
     socket.emit("setSettings", data)
   }
 
@@ -534,6 +541,7 @@ function GameSettings() {
   const [timerValue, setTimerValue] = useState(timer)
   const [livesValue, setLivesValue] = useState(lives)
   const [lettersValue, setLettersValue] = useState(letterBlendCounter)
+  const [hardModeValue, setHardModeValue] = useState(hardMode)
 
   useEffect(() => {
     const triggerValidation = (val) => {
@@ -556,13 +564,19 @@ function GameSettings() {
     <>
       <Form onSubmit={submitForm} className="p-3">
         <Row>
-          <Stack gap={3}>
+          <Stack gap={2}>
+            {/* <Form.Check
+              type="switch"
+              checked={!!true}
+              onChange={() => {}}
+              label="Show Timer"
+            /> */}
             <Form.Group controlId="timer">
               <Form.Label className="mb-0">
                 Timer: <strong>{timerValue}s</strong>
               </Form.Label>
               <Form.Range
-                key={`form-${timer}`}
+                key={`form-timer-${timer}`}
                 name="timer"
                 defaultValue={String(timer)}
                 min="1"
@@ -577,7 +591,7 @@ function GameSettings() {
                 Lives: <strong>{livesValue}</strong>
               </Form.Label>
               <Form.Range
-                key={`form-${lives}`}
+                key={`form-lives-${lives}`}
                 type="number"
                 name="lives"
                 defaultValue={lives}
@@ -593,7 +607,7 @@ function GameSettings() {
                 Change letters after <strong>{lettersValue}</strong> turns
               </Form.Label>
               <Form.Range
-                key={`form-${letterBlendCounter}`}
+                key={`form-letterBlendCounter-${letterBlendCounter}`}
                 type="number"
                 name="letterBlendCounter"
                 defaultValue={letterBlendCounter}
@@ -602,6 +616,23 @@ function GameSettings() {
                 step="1"
                 disabled={running}
                 onChange={(e) => setLettersValue(e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group controlId="hardMode">
+              <Form.Label className="mb-0">
+                Hard mode after <strong>{hardModeValue}</strong> rounds{" "}
+                <HardmodeTooltip />
+              </Form.Label>
+              <Form.Range
+                key={`form-hardMode-${hardMode}`}
+                type="number"
+                name="hardMode"
+                defaultValue={hardMode}
+                min="1"
+                max="10"
+                step="1"
+                disabled={running}
+                onChange={(e) => setHardModeValue(e.target.value)}
               />
             </Form.Group>
             <div className="d-flex align-items-end">
@@ -618,6 +649,19 @@ function GameSettings() {
         </Row>
       </Form>
     </>
+  )
+}
+
+const HardmodeTooltip = () => {
+  const renderTooltip = (props) => (
+    <Tooltip {...props}>
+      Randomizes the bomb timer (subtracts a random number between 0 - timer/2)
+    </Tooltip>
+  )
+  return (
+    <OverlayTrigger placement="top" overlay={renderTooltip}>
+      <span>ℹ️</span>
+    </OverlayTrigger>
   )
 }
 
@@ -681,20 +725,53 @@ function Game() {
           {running ? "Stop" : "Start Game"}
         </Button>
         {!running && !winner && <Rules />}
-        <div>
-          <HeartLetters />
-        </div>
+        <Rounds />
+        <HeartLetters />
         {running && (
           <div className="my-5">
             <div className="h1">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
-            <div className="h3">{timer}</div>
+
+            <div className="h3 position-relative shake-little shake-constant">
+              <div
+                className="position-absolute text-white"
+                style={{
+                  fontSize: "1.5em",
+                  top: "35px",
+                  bottom: 0,
+                  left: "-20px",
+                  right: 0
+                }}
+              >
+                {timer}
+              </div>
+              <Bombsvg style={{ maxWidth: "100px" }} />
+            </div>
           </div>
         )}
         {!running && winner && <Winner winner={winner} />}
       </div>
       <Players />
     </>
+  )
+}
+
+function Rounds() {
+  const { room } = useRoom()
+  const round = room.get("round")
+  const running = room.get("running")
+  const winner = room.get("winner")
+  const hardMode = room.get("hardMode")
+
+  if (!running && !winner) {
+    return null
+  }
+
+  return (
+    <div className={clsx(running && "mb-3")}>
+      Round <strong>{round}</strong>{" "}
+      {hardMode && <strong className="text-danger">Hardmode on!</strong>}
+    </div>
   )
 }
 
