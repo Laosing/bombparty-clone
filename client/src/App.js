@@ -59,6 +59,7 @@ import * as avatarStyle from "@dicebear/big-smile"
 import { useInterval } from "functions/hooks"
 import { JellyTriangle } from "@uiball/loaders"
 import { useDeferredValue } from "react"
+import confetti from "canvas-confetti"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -800,6 +801,26 @@ function Rounds() {
 }
 
 function Winner({ winner }) {
+  const ref = React.useRef()
+  const refCallback = React.useCallback((node) => {
+    if (ref.current) {
+      confetti.reset()
+    }
+    if (node) {
+      var rect = node.getBoundingClientRect()
+      confetti({
+        origin: {
+          x: (rect.left + rect.width / 2) / window.innerWidth,
+          y: (rect.top + rect.height / 2) / window.innerHeight
+        },
+        particleCount: 100,
+        startVelocity: 30,
+        spread: 270
+      })
+    }
+    ref.current = node
+  }, [])
+
   return (
     <h3 className="mb-5">
       Winner!
@@ -808,7 +829,7 @@ function Winner({ winner }) {
           style={{ width: "3em", marginBottom: "-.25em" }}
           id={winner.avatar}
         />
-        <div>{winner.name}</div>
+        <div ref={refCallback}>{winner.name}</div>
       </div>
     </h3>
   )
