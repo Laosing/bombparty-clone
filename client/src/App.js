@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react"
+import React, { useContext, useEffect, useState, useDeferredValue } from "react"
 import io from "socket.io-client"
 
 import "./App.scss"
@@ -58,7 +58,6 @@ import { createAvatar } from "@dicebear/avatars"
 import * as avatarStyle from "@dicebear/big-smile"
 import { useInterval } from "functions/hooks"
 import { JellyTriangle } from "@uiball/loaders"
-import { useDeferredValue } from "react"
 import confetti from "canvas-confetti"
 
 const isDevEnv = process.env.NODE_ENV === "development"
@@ -79,7 +78,7 @@ const useSoundStore = create(
       toggleMusic: () => set({ music: !get().music }),
       soundEffects: true,
       toggleSoundEffects: () => set({ soundEffects: !get().soundEffects }),
-      volume: 100,
+      volume: 0.5,
       setVolume: (val) => set({ volume: val })
     }),
     { name: "sound-settings" }
@@ -653,13 +652,13 @@ function GameSettings() {
 
 const HardmodeTooltip = () => {
   const renderTooltip = (props) => (
-    <Tooltip {...props}>
+    <Tooltip id="hardMode-tooltip" {...props}>
       Randomizes the bomb timer (subtracts a random number between 0 - timer/2)
     </Tooltip>
   )
   return (
-    <OverlayTrigger placement="top" overlay={renderTooltip}>
-      <span>ℹ️</span>
+    <OverlayTrigger overlay={renderTooltip}>
+      <span style={{ width: "fit-content" }}>ℹ️</span>
     </OverlayTrigger>
   )
 }
@@ -826,6 +825,7 @@ function Winner({ winner }) {
       Winner!
       <div className="mt-2 display-3 animate__animated animate__bounceIn">
         <Avatar
+          className="animate__animated animate__infinite animate__pulse animate__slow"
           style={{ width: "3em", marginBottom: "-.25em" }}
           id={winner.avatar}
         />
