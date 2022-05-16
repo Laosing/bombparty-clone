@@ -12,3 +12,56 @@ body,
   display: flex;
   flex-direction: column;
 }
+
+.svg_bomb {
+  animation-name: svg_bomb;
+  animation-duration: 1000ms;
+  animation-timing-function: ease;
+  animation-iteration-count: infinite;
+}
+
+@keyframes svg_bomb {
+  0% {
+    fill: black;
+  }
+  50% {
+    fill: white;
+  }
+  100% {
+    fill: black;
+  }
+}
+
+.boom {
+  position: relative;
+  z-index: 10;
+  animation: boom 0.15s ease;
+  animation-fill-mode: forwards;
+}
+
+.bombEntrance {
+  animation: bombEntrance 0.3s ease;
+  animation-fill-mode: forwards;
+}
+
+@keyframes bombEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes boom {
+  0% {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5, 1.5);
+    opacity: 0;
+  }
+}

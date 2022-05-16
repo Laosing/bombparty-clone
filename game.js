@@ -10,20 +10,18 @@ const rooms = new Map()
 function connection(io, socket) {
   const { roomId } = socket.handshake.query
 
-  socket.join(roomId)
+  let _firstRound = true
 
   getRoom()
-  // handleMessage("joined the room!")
-
   initializeUser()
   setSettings()
 
+  socket.join(roomId)
   socket.on("setSettings", (value) => setSettings(value))
   socket.on("checkWord", (value, userId) => checkWord(value, userId))
-  socket.on("setPlayerText", (value, userId) => setPlayerText(value, userId))
+  socket.on("setGlobalInputText", (value) => setGlobalInputText(value))
   socket.on("startGame", () => startGame())
   socket.on("stopGame", () => stopGame())
-  socket.on("switchPlayer", () => switchPlayer())
   socket.on("getRoom", () => relayRoom())
   socket.on("updateName", (value, userId) => updateName(value, userId))
   socket.on("updateAvatar", (userId) => updateAvatar(userId))
@@ -36,6 +34,10 @@ function connection(io, socket) {
   function relayRoom() {
     const { roomId, room } = getRoom()
     io.sockets.in(roomId).emit("getRoom", serialize(room))
+  }
+
+  function setGlobalInputText(text = "") {
+    io.sockets.in(roomId).emit("setGlobalInputText", text)
   }
 
   function updateName(value, userId) {
@@ -58,7 +60,7 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function setUserLetters(value, userId) {
+  function setUserLetters(userId, value) {
     const { users } = getRoom()
     const user = users.get(userId)
     const letters = new Set([...user.letters, ...value.split("")])
@@ -97,7 +99,8 @@ function connection(io, socket) {
         .in(roomId)
         .emit("wordValidation", true, { value, letterBlend, currentPlayer })
       words.add(value)
-      setUserLetters(value, userId)
+      setPlayerText(userId, value)
+      setUserLetters(userId, value)
       resetletterBlendCounter()
       room.set("letterBlend", getRandomLetters())
       timerConstructor.reset()
@@ -111,18 +114,19 @@ function connection(io, socket) {
         isLongEnough,
         currentPlayer
       })
-      setPlayerText("", userId, false)
+      setPlayerText(userId, "")
     }
+    setGlobalInputText()
     relayRoom()
   }
 
   function switchPlayer() {
     const { room, users, currentPlayer } = getRoom()
     const nextPlayer = !currentPlayer
-      ? getRandomKey(users)
+      ? getRandomPlayer(users)
       : getNextPlayer(users)
     room.set("currentPlayer", nextPlayer)
-    setPlayerText("", nextPlayer, false)
+    setPlayerText(nextPlayer, "")
   }
 
   function loseLife() {
@@ -134,11 +138,10 @@ function connection(io, socket) {
     }
   }
 
-  function setPlayerText(text, userId, relay = true) {
+  function setPlayerText(userId, text) {
     const { users } = getRoom()
     const player = users.get(userId)
     users.set(userId, { ...player, text })
-    relay && relayRoom()
   }
 
   function getRandomInt(min, max) {
@@ -147,15 +150,15 @@ function connection(io, socket) {
 
   function resetTimer() {
     const { room, timerConstructor, hardMode, settings } = getRoom()
-    if (hardMode) {
-      const settingsTimer = settings.get("timer")
+    const settingsTimer = settings.get("timer")
+    if (hardMode && settingsTimer > 1) {
       const num = getRandomInt(0, Math.ceil(settingsTimer / 2))
       const seconds = settingsTimer - num
       timerConstructor.stop()
       timerConstructor.start({ startValues: { seconds } })
       room.set("timer", seconds)
     } else {
-      updateTimer()
+      room.set("timer", settingsTimer)
     }
   }
 
@@ -163,20 +166,18 @@ function connection(io, socket) {
     const { room, timerConstructor } = getRoom()
     const { seconds } = timerConstructor.getTimeValues()
     room.set("timer", seconds)
-    return { seconds, timerConstructor }
+    relayRoom()
   }
 
   function updateSecondsTimer() {
-    const { seconds, timerConstructor } = updateTimer()
-    if (seconds === 0) {
-      io.sockets.in(roomId).emit("boom", true)
-      loseLife()
-      const hasWinner = checkGameState()
-      if (!hasWinner) {
-        switchPlayer()
-        decrementletterBlendCounter()
-        timerConstructor.reset()
-      }
+    const { timerConstructor } = getRoom()
+    io.sockets.in(roomId).emit("boom", true)
+    loseLife()
+    const hasWinner = checkGameState()
+    if (!hasWinner) {
+      switchPlayer()
+      decrementletterBlendCounter()
+      timerConstructor.reset()
     }
     relayRoom()
   }
@@ -208,17 +209,19 @@ function connection(io, socket) {
       .set("words", new Set())
       .set("round", 1)
       .set("hardMode", false)
+      .set("startingPlayer", "")
+
+    _firstRound = true
     resetletterBlendCounter()
     resetUser()
     switchPlayer()
 
-    timerConstructor.start({ startValues: { seconds: startTimer } })
-
     timerConstructor.on("started", updateTimer)
     timerConstructor.on("reset", resetTimer)
-    timerConstructor.on("secondsUpdated", updateSecondsTimer)
+    timerConstructor.on("secondsUpdated", updateTimer)
+    timerConstructor.on("targetAchieved", updateSecondsTimer)
 
-    relayRoom()
+    timerConstructor.start({ startValues: { seconds: startTimer } })
   }
 
   function checkGameState() {
@@ -267,15 +270,20 @@ function connection(io, socket) {
   }
 
   function getNextPlayer(collection) {
-    const { currentPlayer } = getRoom()
+    const { currentPlayer, startingPlayer } = getRoom()
+
+    if (currentPlayer === startingPlayer) {
+      if (_firstRound) {
+        _firstRound = false
+      } else {
+        incrementRound()
+      }
+    }
 
     const players = [...collection]
     let currentIndex = players.findIndex(([key]) => key === currentPlayer)
 
-    if (currentIndex === players.length - 1) {
-      incrementRound()
-      currentIndex = 0
-    }
+    if (currentIndex === players.length - 1) currentIndex = 0
 
     let nextPlayerId
     for (let i = currentIndex; i < players.length; i++) {
@@ -284,16 +292,21 @@ function connection(io, socket) {
       nextPlayerId = id
       break
     }
+
     if (!nextPlayerId) {
-      nextPlayerId = players[0][0]
+      const remainingPlayers = players.filter(([, val]) => val.lives > 0)
+      nextPlayerId = remainingPlayers[0][0]
     }
 
     return nextPlayerId
   }
 
-  function getRandomKey(collection) {
+  function getRandomPlayer(collection) {
+    const { room } = getRoom()
     const keys = Array.from(collection.keys())
-    return keys[Math.floor(Math.random() * keys.length)]
+    const randomPlayer = keys[Math.floor(Math.random() * keys.length)]
+    room.set("startingPlayer", randomPlayer)
+    return randomPlayer
   }
 
   function getRoom() {
@@ -312,9 +325,10 @@ function connection(io, socket) {
         new Timer({ countdown: true })
       ),
       timer: setProp("timer", 0),
-      round: setProp("round", 1),
+      round: setProp("round", 0),
       hardMode: setProp("hardMode", false),
       currentPlayer: setProp("currentPlayer", ""),
+      startingPlayer: setProp("startingPlayer", ""),
       running: setProp("running", false),
       winner: setProp("winner", null),
       letterBlendCounter: setProp("letterBlendCounter", 0),
@@ -334,6 +348,7 @@ function connection(io, socket) {
       avatar: nanoid()
     })
     io.sockets.in(roomId).emit("userJoined", userId)
+    stopGame()
   }
 
   function setSettings(data) {
@@ -368,11 +383,6 @@ function connection(io, socket) {
 
     messages.add(message)
     relayRoom()
-
-    // setTimeout(() => {
-    //   messages.delete(message)
-    //   io.sockets.emit("deleteMessage", message.id)
-    // }, messageExpirationTimeMS)
   }
 
   function disconnect(reason) {

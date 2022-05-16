@@ -3,7 +3,6 @@ import io from "socket.io-client"
 
 import "./App.scss"
 import "animate.css"
-import "csshake/dist/csshake-little.min.css"
 
 import {
   BrowserRouter,
@@ -23,8 +22,6 @@ import {
 import { customAlphabet, nanoid } from "nanoid"
 
 import { deserialize } from "functions/deserialize"
-// import { useLocalStorage } from "functions/hooks"
-import { useDebouncedCallback } from "use-debounce"
 import { MessagesWrapper } from "components/Messages"
 
 import {
@@ -61,6 +58,7 @@ import { createAvatar } from "@dicebear/avatars"
 import * as avatarStyle from "@dicebear/big-smile"
 import { useInterval } from "functions/hooks"
 import { JellyTriangle } from "@uiball/loaders"
+import { useDeferredValue } from "react"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -688,6 +686,7 @@ function Game() {
   const timer = room.get("timer")
   const running = room.get("running")
   const winner = room.get("winner")
+  const hardMode = room.get("hardMode")
 
   const [lobbyMusic] = useHowl(soundLobby, "music", {
     loop: true,
@@ -713,6 +712,21 @@ function Game() {
     }
   }, [running, lobbyMusic])
 
+  const [boom, setBoom] = useState(false)
+
+  useEffect(() => {
+    const triggerBoom = () => {
+      setBoom(true)
+      setTimeout(() => setBoom(false), 300)
+    }
+
+    socket.on("boom", triggerBoom)
+    return () => {
+      socket.off("boom", triggerBoom)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <>
       <div className="mb-4">
@@ -731,11 +745,11 @@ function Game() {
           <div className="my-5">
             <div className="h1">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
-
-            <div className="h3 position-relative shake-little shake-constant">
+            <div className="h3 position-relative ">
               <div
                 className="position-absolute text-white"
                 style={{
+                  zIndex: "1",
                   fontSize: "1.5em",
                   top: "35px",
                   bottom: 0,
@@ -745,7 +759,17 @@ function Game() {
               >
                 {timer}
               </div>
-              <Bombsvg style={{ maxWidth: "100px" }} />
+              <div className={clsx(boom ? "boom" : "bombEntrance")}>
+                <Bombsvg
+                  className={clsx(
+                    "animate__animated animate__infinite animate__pulse"
+                  )}
+                  style={{
+                    maxWidth: "100px",
+                    fill: hardMode ? "var(--bs-danger)" : "initial"
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -816,13 +840,12 @@ function PlayerInput() {
   const { room } = useRoom()
 
   const [value, setValue] = useState("")
+  const deferredValue = useDeferredValue(value)
 
   const validation = useWordValidation(500)
 
-  const users = room.get("users")
   const currentPlayer = room.get("currentPlayer")
   const isCurrentPlayer = currentPlayer === userId
-  const currentRoomPlayer = users.get(currentPlayer)
 
   const submitForm = (e) => {
     e.preventDefault()
@@ -830,11 +853,11 @@ function PlayerInput() {
     e.target.reset()
   }
 
-  const debounced = useDebouncedCallback((value) => {
+  const onChange = (value) => {
     const val = value.trim().toLowerCase()
     setValue(val)
-    socket.emit("setPlayerText", val, userId)
-  }, 30)
+    socket.emit("setGlobalInputText", val)
+  }
 
   const color =
     validation.isValid === false
@@ -852,6 +875,18 @@ function PlayerInput() {
       ? "Missing the letters above"
       : ""
 
+  useEffect(() => {
+    setValue("")
+  }, [currentPlayer])
+
+  useEffect(() => {
+    socket.on("setGlobalInputText", setValue)
+    return () => {
+      socket.off("setGlobalInputText", setValue)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <>
       <Form
@@ -863,9 +898,9 @@ function PlayerInput() {
           className={clsx(color)}
           key={isCurrentPlayer}
           autoFocus
-          onChange={(e) => debounced(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           disabled={!isCurrentPlayer}
-          {...(!isCurrentPlayer && { value: currentRoomPlayer.text })}
+          {...(!isCurrentPlayer && { value: deferredValue })}
         />
         <Form.Text
           className="text-danger fw-bold position-absolute top-100 start-50 w-100"
