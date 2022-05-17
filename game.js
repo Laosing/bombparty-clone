@@ -3,7 +3,9 @@ const serialize = require("serialize-javascript")
 const Timer = require("easytimer.js").Timer
 
 const dictionary = require("./data/wordlist.json")
-const { getRandomLetters } = require("./data/randomLetters")
+const { getRandomLettersFn } = require("./data/randomLetters")
+
+const getRandomLetters = getRandomLettersFn(Object.keys(dictionary))
 
 const rooms = new Map()
 
