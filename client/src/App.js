@@ -46,6 +46,7 @@ import soundLobby from "audio/lobby-2.m4a"
 import soundValid from "audio/valid.mp3"
 import soundInvalid from "audio/error.mp3"
 import soundJoining from "audio/joining.mp3"
+import soundGainedHeart from "audio/gained-heart.mp3"
 import soundWinner from "audio/winner.mp3"
 
 import { ReactComponent as Bombsvg } from "images/bomb.svg"
@@ -712,20 +713,7 @@ function Game() {
     }
   }, [running, lobbyMusic])
 
-  const [boom, setBoom] = useState(false)
-
-  useEffect(() => {
-    const triggerBoom = () => {
-      setBoom(true)
-      setTimeout(() => setBoom(false), 300)
-    }
-
-    socket.on("boom", triggerBoom)
-    return () => {
-      socket.off("boom", triggerBoom)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const boom = useEventTimeout("boom")
 
   return (
     <>
@@ -778,6 +766,26 @@ function Game() {
       <Players />
     </>
   )
+}
+
+const useEventTimeout = (event, timeout = 300) => {
+  const { socket } = useSocket()
+  const [state, setState] = useState(false)
+
+  useEffect(() => {
+    const triggerEvent = (userId) => {
+      setState(userId)
+      setTimeout(() => setState(false), timeout)
+    }
+
+    socket.on(event, triggerEvent)
+    return () => {
+      socket.off(event, triggerEvent)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return state
 }
 
 function Rounds() {
@@ -967,8 +975,9 @@ function Players() {
   const [boomControls] = useHowl(soundBoom)
   const [winnerControls] = useHowl(soundWinner)
   const [userJoinedControls] = useHowl(soundJoining)
+  const [gainedHeartControls] = useHowl(soundGainedHeart)
 
-  const validation = useWordValidation(null, (isValid) => {
+  const validation = useWordValidation(500, (isValid) => {
     if (isValid) {
       validControls.play()
     } else {
@@ -977,14 +986,17 @@ function Players() {
   })
 
   useEffect(() => {
+    const triggerGainedHeart = () => gainedHeartControls.play()
     const triggerBoom = () => boomControls.play()
     const triggerUserJoined = () => userJoinedControls.play()
     const triggerWinner = () => winnerControls.play()
 
+    socket.on("gainedHeart", triggerGainedHeart)
     socket.on("userJoined", triggerUserJoined)
     socket.on("winner", triggerWinner)
     socket.on("boom", triggerBoom)
     return () => {
+      socket.off("gainedHeart", triggerGainedHeart)
       socket.off("userJoined", triggerUserJoined)
       socket.off("winner", triggerWinner)
       socket.off("boom", triggerBoom)
@@ -1012,7 +1024,7 @@ function Players() {
               "position-relative",
               "list-group-item",
               running &&
-                value.lives === 0 &&
+                value.lives <= 0 &&
                 "list-group-item-secondary text-decoration-line-through",
               id === currentPlayer && "list-group-item-primary"
             )}
@@ -1025,7 +1037,6 @@ function Players() {
               {running &&
                 (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
             </span>
-
             <span
               className={clsx(
                 id === currentPlayer && "fw-bold",
@@ -1037,14 +1048,17 @@ function Players() {
                   💣
                 </span>
               )}
-
-              {value?.name}
+              {value.name}
             </span>
-            <span className="text-danger">
-              {running ? new Array(Number(value?.lives || 0)).fill("❤") : ""}
-            </span>
+            {running && (
+              <span className="text-danger">
+                {Array.from(Array(Number(value?.lives) || 0), (_, index) => (
+                  <span key={index}>❤</span>
+                ))}
+              </span>
+            )}
             {running && id !== currentPlayer && (
-              <span className="ms-auto small">{value?.text}</span>
+              <span className="ms-auto small">{value.text}</span>
             )}
           </Stack>
         ))}

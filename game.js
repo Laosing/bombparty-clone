@@ -65,7 +65,12 @@ function connection(io, socket) {
     const user = users.get(userId)
     const letters = new Set([...user.letters, ...value.split("")])
     if (letters.size >= 26) {
-      users.set(userId, { ...user, lives: user.lives + 1, letters: new Set() })
+      users.set(userId, {
+        ...user,
+        lives: Number(user.lives) + 1,
+        letters: new Set()
+      })
+      io.sockets.in(roomId).emit("gainedHeart")
     } else {
       users.set(userId, { ...user, letters })
     }
@@ -170,8 +175,8 @@ function connection(io, socket) {
   }
 
   function updateSecondsTimer() {
-    const { timerConstructor } = getRoom()
-    io.sockets.in(roomId).emit("boom", true)
+    const { timerConstructor, currentPlayer } = getRoom()
+    io.sockets.in(roomId).emit("boom", currentPlayer)
     loseLife()
     const hasWinner = checkGameState()
     if (!hasWinner) {
