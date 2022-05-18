@@ -1,4 +1,4 @@
-const { readFileSync, writeFileSync } = require("fs")
+import { readFileSync, writeFileSync } from "fs"
 
 function convertFile(file) {
   const array = readFileSync(`${file}.txt`)

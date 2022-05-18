@@ -57,6 +57,4 @@ function getRandomLettersFn(dictionary) {
   }
 }
 
-module.exports = {
-  getRandomLettersFn
-}
+export { getRandomLettersFn }

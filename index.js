@@ -1,29 +1,17 @@
 #!/usr/bin/env node
 
-const game = require("./game")
-const socketio = require("socket.io")
+import { Server } from "socket.io"
+import http from "http"
+import chalk from "chalk"
 
-/**
- * Module dependencies.
- */
-
-const app = require("./app")
-const debug = require("debug")("game-server:server")
-const http = require("http")
-
-/**
- * Get port from environment and store in Express.
- */
+import { app } from "./app.js"
+import game from "./game.js"
 
 const port = normalizePort(process.env.PORT || "8080")
 app.set("port", port)
 
-/**
- * Create HTTP server.
- */
-
-const server = http.createServer(app)
-const io = socketio(server, {
+const httpServer = http.createServer(app)
+const io = new Server(httpServer, {
   pingTimeout: 60000,
   maxHttpBufferSize: 1e8,
   cors: {
@@ -33,19 +21,15 @@ const io = socketio(server, {
 })
 game(io)
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+const log = console.log
+const colors = ["red", "blue", "yellow"]
+colors.forEach((color) => (log[color] = (msg) => log(chalk[color](msg))))
 
-server.listen(port, () => {
-  console.log(`Server started, listening on port ${port}!`)
+httpServer.listen(port, () => {
+  log.blue(`Server started, listening on port ${port}!`)
 })
-server.on("error", onError)
-server.on("listening", onListening)
-
-/**
- * Normalize a port into a number, string, or false.
- */
+httpServer.on("error", onError)
+httpServer.on("listening", onListening)
 
 function normalizePort(val) {
   const port = parseInt(val, 10)
@@ -62,10 +46,6 @@ function normalizePort(val) {
 
   return false
 }
-
-/**
- * Event listener for HTTP server "error" event.
- */
 
 function onError(error) {
   if (error.syscall !== "listen") {
@@ -89,12 +69,8 @@ function onError(error) {
   }
 }
 
-/**
- * Event listener for HTTP server "listening" event.
- */
-
 function onListening() {
-  const addr = server.address()
+  const addr = httpServer.address()
   const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port
-  debug("Listening on " + bind)
+  log("Listening on " + bind)
 }

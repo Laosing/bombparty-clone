@@ -1,9 +1,11 @@
-const { nanoid } = require("nanoid")
-const serialize = require("serialize-javascript")
-const Timer = require("easytimer.js").Timer
+import { nanoid } from "nanoid"
+import serialize from "serialize-javascript"
+import { Timer } from "easytimer.js"
+import { readFileSync } from "fs"
+import { getRandomLettersFn } from "./data/randomLetters.js"
 
-const dictionary = require("./data/wordlist.json")
-const { getRandomLettersFn } = require("./data/randomLetters")
+// import dictionary from "./data/wordlist.json" assert { type: "json" }
+const dictionary = JSON.parse(readFileSync("./data/wordlist.json"))
 
 const fetchRandomLetters = getRandomLettersFn(Object.keys(dictionary))
 
@@ -26,6 +28,7 @@ function connection(io, socket) {
   setSettings()
 
   socket.join(roomId)
+  socket.on("joinGame", (userId) => joinGame(userId))
   socket.on("setSettings", (value) => setSettings(value))
   socket.on("checkWord", (value, userId) => checkWord(value, userId))
   socket.on("setGlobalInputText", (value) => setGlobalInputText(value))
@@ -39,6 +42,11 @@ function connection(io, socket) {
   socket.on("connect_error", (err) => {
     console.log(`connect_error due to ${err.message}`)
   })
+  socket.onAny((eventName, ...args) => {
+    // ...
+  })
+
+  function joinGame(userId) {}
 
   function relayRoom() {
     const { roomId, room } = getRoom()
@@ -413,11 +421,11 @@ function connection(io, socket) {
   }
 }
 
-function chat(io) {
+function game(io) {
   // io.use(userHandler)
   io.on("connection", (socket) => {
     connection(io, socket)
   })
 }
 
-module.exports = chat
+export default game

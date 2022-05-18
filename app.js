@@ -1,9 +1,14 @@
-const express = require("express")
-const path = require("path")
-const cookieParser = require("cookie-parser")
-const logger = require("morgan")
+import express from "express"
+import path from "path"
+import cookieParser from "cookie-parser"
+import logger from "morgan"
 
-const cors = require("cors")
+import cors from "cors"
+import { fileURLToPath } from "url"
+import { dirname } from "path"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const app = express()
 
@@ -18,4 +23,4 @@ app.get("/*", (req, res) => {
   res.sendFile(path.resolve(__dirname, "client/build", "index.html"))
 })
 
-module.exports = app
+export { app }
