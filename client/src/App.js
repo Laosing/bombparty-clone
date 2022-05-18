@@ -60,6 +60,7 @@ import * as avatarStyle from "@dicebear/big-smile"
 import { useInterval } from "functions/hooks"
 import { JellyTriangle } from "@uiball/loaders"
 import confetti from "canvas-confetti"
+import Highlighter from "react-highlight-words"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -95,6 +96,15 @@ const useGameStore = create(
     }),
     { name: "game-settings" }
   )
+)
+
+const Highlight = (props) => (
+  <Highlighter
+    highlightTag="span"
+    highlightClassName="text-danger"
+    autoEscape={true}
+    {...props}
+  />
 )
 
 function Header({ children }) {
@@ -713,7 +723,7 @@ function Game() {
     }
   }, [running, lobbyMusic])
 
-  const boom = useEventTimeout("boom")
+  const [boom, boomLetterBlend, boomWord] = useEventTimeout("boom", 950)
 
   return (
     <>
@@ -730,7 +740,15 @@ function Game() {
         <Rounds />
         <HeartLetters />
         {running && (
-          <div className="my-5">
+          <div className="my-5 position-relative">
+            {boom && (
+              <div className="h4 text-secondary position-absolute start-0 end-0 top-0 letterblend-fade">
+                <Highlight
+                  searchWords={[boomLetterBlend?.toUpperCase()]}
+                  textToHighlight={boomWord?.toUpperCase() || ""}
+                />
+              </div>
+            )}
             <div className="h1">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
             <div className="h3 position-relative ">
@@ -770,12 +788,12 @@ function Game() {
 
 const useEventTimeout = (event, timeout = 300) => {
   const { socket } = useSocket()
-  const [state, setState] = useState(false)
+  const [state, setState] = useState([])
 
   useEffect(() => {
-    const triggerEvent = (userId) => {
-      setState(userId)
-      setTimeout(() => setState(false), timeout)
+    const triggerEvent = (data) => {
+      setState(data)
+      setTimeout(() => setState([]), timeout)
     }
 
     socket.on(event, triggerEvent)
@@ -893,7 +911,7 @@ function PlayerInput() {
       ? "animate__animated animate__shakeX animate__faster border-danger"
       : validation.isValid
       ? "border-success"
-      : "initial"
+      : ""
 
   const errorReason =
     validation.isUnique === false
@@ -1058,7 +1076,12 @@ function Players() {
               </span>
             )}
             {running && id !== currentPlayer && (
-              <span className="ms-auto small">{value.text}</span>
+              <span className="ms-auto small">
+                <Highlight
+                  searchWords={[value.letterBlend]}
+                  textToHighlight={value.text}
+                />
+              </span>
             )}
           </Stack>
         ))}

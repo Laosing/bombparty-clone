@@ -45,6 +45,30 @@ body,
   animation-fill-mode: forwards;
 }
 
+.letterblend-fade {
+  animation: letterblendFade 0.95s;
+  animation-fill-mode: both;
+}
+
+@keyframes letterblendFade {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-1em);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-1em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-1.5em);
+  }
+}
+
 @keyframes bombEntrance {
   0% {
     opacity: 0;

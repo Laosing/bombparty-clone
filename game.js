@@ -5,14 +5,21 @@ const Timer = require("easytimer.js").Timer
 const dictionary = require("./data/wordlist.json")
 const { getRandomLettersFn } = require("./data/randomLetters")
 
-const getRandomLetters = getRandomLettersFn(Object.keys(dictionary))
+const fetchRandomLetters = getRandomLettersFn(Object.keys(dictionary))
 
 const rooms = new Map()
 
 function connection(io, socket) {
   const { roomId } = socket.handshake.query
 
+  let _word = ""
   let _firstRound = true
+
+  const getRandomLetters = () => {
+    const [letters, word] = fetchRandomLetters()
+    _word = word
+    return letters
+  }
 
   getRoom()
   initializeUser()
@@ -72,7 +79,7 @@ function connection(io, socket) {
         lives: Number(user.lives) + 1,
         letters: new Set()
       })
-      io.sockets.in(roomId).emit("gainedHeart")
+      io.sockets.in(roomId).emit("gainedHeart", userId)
     } else {
       users.set(userId, { ...user, letters })
     }
@@ -146,9 +153,9 @@ function connection(io, socket) {
   }
 
   function setPlayerText(userId, text) {
-    const { users } = getRoom()
+    const { users, letterBlend } = getRoom()
     const player = users.get(userId)
-    users.set(userId, { ...player, text })
+    users.set(userId, { ...player, text, letterBlend })
   }
 
   function getRandomInt(min, max) {
@@ -177,13 +184,15 @@ function connection(io, socket) {
   }
 
   function updateSecondsTimer() {
-    const { timerConstructor, currentPlayer } = getRoom()
-    io.sockets.in(roomId).emit("boom", currentPlayer)
+    const { timerConstructor, currentPlayer, letterBlend, letterBlendCounter } =
+      getRoom()
+    const wordDetails = letterBlendCounter <= 1 ? [letterBlend, _word] : []
+    io.sockets.in(roomId).emit("boom", [currentPlayer, ...wordDetails])
     loseLife()
     const hasWinner = checkGameState()
     if (!hasWinner) {
       switchPlayer()
-      decrementletterBlendCounter()
+      switchletterBlend()
       timerConstructor.reset()
     }
     relayRoom()
@@ -195,7 +204,7 @@ function connection(io, socket) {
     room.set("letterBlendCounter", settingsLetterBlendCounter)
   }
 
-  function decrementletterBlendCounter() {
+  function switchletterBlend() {
     const { room, letterBlendCounter, settings } = getRoom()
     const counter = letterBlendCounter - 1
     room.set("letterBlendCounter", counter)

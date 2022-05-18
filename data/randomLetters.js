@@ -53,7 +53,7 @@ function randomLetters(items, chance = 0.7) {
 function getRandomLettersFn(dictionary) {
   return (chance) => {
     const word = random(dictionary)
-    return randomLetters(word, chance)
+    return [randomLetters(word, chance), word]
   }
 }
 
