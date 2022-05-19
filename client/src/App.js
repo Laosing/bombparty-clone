@@ -111,7 +111,7 @@ function Header({ children }) {
   return (
     <Navbar bg="dark" variant="dark">
       <Container fluid>
-        <Navbar.Brand className="m-auto">💥💣 Bombparty 💣💥</Navbar.Brand>
+        <Navbar.Brand className="m-auto p-0">💥💣 Bombparty 💣💥</Navbar.Brand>
         {children}
       </Container>
     </Navbar>
@@ -204,14 +204,17 @@ const Router = () => {
 
 const LayoutWithHeader = ({ children, ...props }) => (
   <>
-    <Header />
+    {/* <Header /> */}
     <Layout {...props}>{children}</Layout>
   </>
 )
 
 const Layout = ({ children, className, ...props }) => {
   return (
-    <Container className={clsx("my-5 text-center", className)} {...props}>
+    <Container
+      className={clsx("my-lg-5 my-3 text-center", className)}
+      {...props}
+    >
       {children}
     </Container>
   )
@@ -253,11 +256,17 @@ const Home = () => {
 const Rules = ({ className }) => (
   <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
     <h5>🧐 Rules</h5>
-    <p className="mx-auto small mb-0">
+    <p className="mx-auto small">
       On a player's turn they must type a word (more than 2 characters)
       containing the given letters in order before the bomb explodes (example:
-      LU - BLUE). If a player does not type a word in time, they lose a life.
-      The last player remaining wins the game.
+      LU - BLUE).
+    </p>
+    <p className="mx-auto small">
+      If a player does not type a word in time, they lose a life 💀. The last
+      player remaining wins the game 🎉.
+    </p>
+    <p className="mx-auto small mb-0">
+      The alphabet is at the top, use all the letters to gain a heart ❤️.
     </p>
   </Alert>
 )
@@ -399,7 +408,7 @@ function Room() {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       <Container fluid className="d-flex flex-grow-1">
         <Row className="flex-grow-1">
           <Col md={8}>
@@ -518,7 +527,6 @@ function HeartLetters() {
           {letter.toUpperCase()}
         </Button>
       ))}
-      <div className="small">Use all the letters to gain a heart</div>
     </div>
   )
 }
@@ -690,7 +698,7 @@ const Avatar = ({ id, ...props }) => {
 }
 
 function Game() {
-  const { socket } = useSocket()
+  const { socket, userId } = useSocket()
   const { room } = useRoom()
 
   const letterBlend = room.get("letterBlend")
@@ -698,6 +706,9 @@ function Game() {
   const running = room.get("running")
   const winner = room.get("winner")
   const hardMode = room.get("hardMode")
+  const users = room.get("users")
+
+  const isInGame = users.get(userId).inGame
 
   const [lobbyMusic] = useHowl(soundLobby, "music", {
     loop: true,
@@ -714,6 +725,9 @@ function Game() {
     }
   }
 
+  const joinGame = () => socket.emit("joinGame")
+  const leaveGame = () => socket.emit("leaveGame")
+
   useEffect(() => {
     if (running) {
       lobbyMusic.stop()
@@ -724,32 +738,49 @@ function Game() {
   }, [running, lobbyMusic])
 
   const [boom, boomLetterBlend, boomWord] = useEventTimeout("boom", 950)
+  const [boomAnimation] = useEventTimeout("boom", 300)
 
   return (
     <>
-      <div className="mb-4">
-        <Button
-          variant={running ? "danger" : "primary"}
-          onClick={toggleGame}
-          className="mb-5"
-          size="lg"
+      <div className="mb-3">
+        <Stack
+          className="position-relative justify-content-center align-items-center mb-3"
+          gap={3}
+          direction="horizontal"
         >
-          {running ? "Stop" : "Start Game"}
-        </Button>
+          {!running && (
+            <Button
+              variant={isInGame ? "danger" : "primary"}
+              onClick={() => (isInGame ? leaveGame() : joinGame())}
+              className=""
+            >
+              {isInGame ? "Leave game" : "Join game"}
+            </Button>
+          )}
+          {isInGame && (
+            <Button
+              variant={running ? "danger" : "primary"}
+              onClick={toggleGame}
+              className=""
+            >
+              {running ? "Stop" : "Start Game"}
+            </Button>
+          )}
+        </Stack>
         {!running && !winner && <Rules />}
         <Rounds />
         <HeartLetters />
         {running && (
-          <div className="my-5 position-relative">
+          <div className="my-3 position-relative">
             {boom && (
-              <div className="h4 text-secondary position-absolute start-0 end-0 top-0 letterblend-fade">
+              <div className="strong text-secondary position-absolute start-0 end-0 top-0 letterblend-fade">
                 <Highlight
                   searchWords={[boomLetterBlend?.toUpperCase()]}
                   textToHighlight={boomWord?.toUpperCase() || ""}
                 />
               </div>
             )}
-            <div className="h1">{letterBlend?.toUpperCase()}</div>
+            <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
             <div className="h3 position-relative ">
               <div
@@ -765,7 +796,7 @@ function Game() {
               >
                 {timer}
               </div>
-              <div className={clsx(boom ? "boom" : "bombEntrance")}>
+              <div className={clsx(boomAnimation ? "boom" : "bombEntrance")}>
                 <Bombsvg
                   className={clsx(
                     "animate__animated animate__infinite animate__pulse"
@@ -818,9 +849,8 @@ function Rounds() {
   }
 
   return (
-    <div className={clsx(running && "mb-3")}>
-      Round <strong>{round}</strong>{" "}
-      {hardMode && <strong className="text-danger">Hardmode on!</strong>}
+    <div className={clsx(hardMode && "text-danger")}>
+      Round <strong>{round}</strong>
     </div>
   )
 }
@@ -847,7 +877,7 @@ function Winner({ winner }) {
   }, [])
 
   return (
-    <h3 className="mb-5">
+    <h3>
       Winner!
       <div className="mt-2 display-3 animate__animated animate__bounceIn">
         <Avatar
@@ -938,7 +968,7 @@ function PlayerInput() {
     <>
       <Form
         onSubmit={submitForm}
-        className="d-flex justify-content-center mt-3 mb-4 flex-column m-auto position-relative"
+        className="d-flex justify-content-center mt-1 mb-4 flex-column m-auto position-relative"
         style={{ maxWidth: "20em" }}
       >
         <Form.Control
@@ -1033,58 +1063,60 @@ function Players() {
     <div>
       <h5>Players</h5>
       <ListGroup style={{ maxWidth: "30em" }} className="m-auto">
-        {Array.from(players).map(([id, value]) => (
-          <Stack
-            direction="horizontal"
-            gap={2}
-            key={id}
-            className={clsx(
-              "position-relative",
-              "list-group-item",
-              running &&
-                value.lives <= 0 &&
-                "list-group-item-secondary text-decoration-line-through",
-              id === currentPlayer && "list-group-item-primary"
-            )}
-          >
-            <span
-              className="position-absolute top-50 start-0"
-              style={{ width: "35px", transform: `translate(-120%, -50%)` }}
-            >
-              {!running && <Avatar id={value.avatar} />}
-              {running &&
-                (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
-            </span>
-            <span
+        {Array.from(players)
+          .filter(([_, val]) => val.inGame)
+          .map(([id, value]) => (
+            <Stack
+              direction="horizontal"
+              gap={2}
+              key={id}
               className={clsx(
-                id === currentPlayer && "fw-bold",
-                id === validation.currentPlayer && textColor
+                "position-relative",
+                "list-group-item",
+                running &&
+                  value.lives <= 0 &&
+                  "list-group-item-secondary text-decoration-line-through",
+                id === currentPlayer && "list-group-item-primary"
               )}
             >
-              {id === currentPlayer && (
-                <span className="position-absolute top-50 start-0 translate-middle">
-                  💣
+              <span
+                className="position-absolute top-50 start-0"
+                style={{ width: "35px", transform: `translate(-120%, -50%)` }}
+              >
+                {!running && <Avatar id={value.avatar} />}
+                {running &&
+                  (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
+              </span>
+              <span
+                className={clsx(
+                  id === currentPlayer && "fw-bold",
+                  id === validation.currentPlayer && textColor
+                )}
+              >
+                {id === currentPlayer && (
+                  <span className="position-absolute top-50 start-0 translate-middle">
+                    💣
+                  </span>
+                )}
+                {value.name}
+              </span>
+              {running && (
+                <span className="text-danger">
+                  {Array.from(Array(Number(value?.lives) || 0), (_, index) => (
+                    <span key={index}>❤</span>
+                  ))}
                 </span>
               )}
-              {value.name}
-            </span>
-            {running && (
-              <span className="text-danger">
-                {Array.from(Array(Number(value?.lives) || 0), (_, index) => (
-                  <span key={index}>❤</span>
-                ))}
-              </span>
-            )}
-            {running && id !== currentPlayer && (
-              <span className="ms-auto small">
-                <Highlight
-                  searchWords={[value.letterBlend]}
-                  textToHighlight={value.text}
-                />
-              </span>
-            )}
-          </Stack>
-        ))}
+              {running && id !== currentPlayer && (
+                <span className="ms-auto small">
+                  <Highlight
+                    searchWords={[value.letterBlend]}
+                    textToHighlight={value.text}
+                  />
+                </span>
+              )}
+            </Stack>
+          ))}
       </ListGroup>
     </div>
   )

@@ -42,7 +42,7 @@ body,
 
 .bombEntrance {
   animation: bombEntrance 0.3s ease;
-  animation-fill-mode: forwards;
+  animation-fill-mode: both;
 }
 
 .letterblend-fade {

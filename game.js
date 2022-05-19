@@ -3,6 +3,7 @@ import serialize from "serialize-javascript"
 import { Timer } from "easytimer.js"
 import { readFileSync } from "fs"
 import { getRandomLettersFn } from "./data/randomLetters.js"
+import { log } from "./index.js"
 
 // import dictionary from "./data/wordlist.json" assert { type: "json" }
 const dictionary = JSON.parse(readFileSync("./data/wordlist.json"))
@@ -28,7 +29,9 @@ function connection(io, socket) {
   setSettings()
 
   socket.join(roomId)
-  socket.on("joinGame", (userId) => joinGame(userId))
+
+  socket.on("joinGame", () => joinGame())
+  socket.on("leaveGame", () => leaveGame())
   socket.on("setSettings", (value) => setSettings(value))
   socket.on("checkWord", (value, userId) => checkWord(value, userId))
   socket.on("setGlobalInputText", (value) => setGlobalInputText(value))
@@ -40,13 +43,25 @@ function connection(io, socket) {
   socket.on("message", (value) => handleMessage(value))
   socket.on("disconnect", (reason) => disconnect(reason))
   socket.on("connect_error", (err) => {
-    console.log(`connect_error due to ${err.message}`)
+    log.red(`connect_error due to ${err.message}`)
   })
-  socket.onAny((eventName, ...args) => {
-    // ...
-  })
+  socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
-  function joinGame(userId) {}
+  function joinGame() {
+    const { userId } = socket.handshake.auth
+    const { users } = getRoom()
+    const user = users.get(userId)
+    users.set(userId, { ...user, inGame: true })
+    relayRoom()
+  }
+
+  function leaveGame() {
+    const { userId } = socket.handshake.auth
+    const { users } = getRoom()
+    const user = users.get(userId)
+    users.set(userId, { ...user, inGame: false })
+    relayRoom()
+  }
 
   function relayRoom() {
     const { roomId, room } = getRoom()
@@ -250,13 +265,14 @@ function connection(io, socket) {
 
   function checkGameState() {
     const { users } = getRoom()
-    const remainingPlayers = Array.from(users).filter(
-      ([, value]) => value.lives > 0
-    )
-    const hasWinner = remainingPlayers.length <= 1
+    const players = Array.from(users).filter(([, val]) => val.inGame)
+    const remainingPlayers = players.filter(([, val]) => val.lives > 0)
+    const lastPlayer = remainingPlayers.length <= 1
+    const singlePlayer = players.length === 1 ? players[0][1].lives <= 1 : false
+    const hasWinner = players.length === 1 ? singlePlayer : lastPlayer
     if (hasWinner) {
       io.sockets.in(roomId).emit("winner", true)
-      const [, winner] = remainingPlayers?.[0] || [...users][0]
+      const [, winner] = remainingPlayers[0] || players[0]
       stopGame(winner)
     }
     return hasWinner
@@ -283,6 +299,21 @@ function connection(io, socket) {
     room.set("users", new Map(updatedUsers))
   }
 
+  function checkIncrementRound(players) {
+    const { currentPlayer, startingPlayer, room } = getRoom()
+
+    if (!players.find(([id]) => id === startingPlayer)) {
+      room.set("startingPlayer", currentPlayer)
+    }
+    if (currentPlayer === startingPlayer) {
+      if (_firstRound) {
+        _firstRound = false
+      } else {
+        incrementRound()
+      }
+    }
+  }
+
   function incrementRound() {
     const { room, round, settings } = getRoom()
     const hardMode = settings.get("hardMode")
@@ -294,31 +325,29 @@ function connection(io, socket) {
   }
 
   function getNextPlayer(collection) {
-    const { currentPlayer, startingPlayer } = getRoom()
+    const { currentPlayer } = getRoom()
+    const players = [...collection].filter(([, val]) => val.inGame)
 
-    if (currentPlayer === startingPlayer) {
-      if (_firstRound) {
-        _firstRound = false
-      } else {
-        incrementRound()
-      }
-    }
+    checkIncrementRound(players)
 
-    const players = [...collection]
     let currentIndex = players.findIndex(([key]) => key === currentPlayer)
-
     if (currentIndex === players.length - 1) currentIndex = 0
 
     let nextPlayerId
     for (let i = currentIndex; i < players.length; i++) {
-      const [id, val] = players[i]
+      const player = players[i]
+      if (!player) continue
+
+      const [id, val] = player
       if (val.lives <= 0 || id === currentPlayer) continue
       nextPlayerId = id
       break
     }
 
     if (!nextPlayerId) {
-      const remainingPlayers = players.filter(([, val]) => val.lives > 0)
+      const remainingPlayers = players.filter(
+        ([, val]) => val.lives > 0 && val.inGame
+      )
       nextPlayerId = remainingPlayers[0][0]
     }
 
@@ -327,7 +356,9 @@ function connection(io, socket) {
 
   function getRandomPlayer(collection) {
     const { room } = getRoom()
-    const keys = Array.from(collection.keys())
+    const keys = Array.from(collection)
+      .filter(([, val]) => val.inGame)
+      .map(([id]) => id)
     const randomPlayer = keys[Math.floor(Math.random() * keys.length)]
     room.set("startingPlayer", randomPlayer)
     return randomPlayer
@@ -369,10 +400,10 @@ function connection(io, socket) {
       id: userId,
       name,
       letters: new Set(),
-      avatar: nanoid()
+      avatar: nanoid(),
+      inGame: false
     })
     io.sockets.in(roomId).emit("userJoined", userId)
-    stopGame()
   }
 
   function setSettings(data) {
@@ -409,12 +440,19 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function disconnect(reason) {
+  function removeUserFromGame() {
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
-    console.log({ reason })
     users.delete(userId)
-    stopGame()
+  }
+
+  function disconnect(reason) {
+    console.log({ reason })
+    const { users } = getRoom()
+    removeUserFromGame()
+    if ([...users].filter(([, val]) => val.inGame) <= 0) {
+      stopGame()
+    }
     // socket.leave(roomId)
     // socket.disconnect(true)
     relayRoom()

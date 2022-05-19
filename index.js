@@ -22,8 +22,8 @@ const io = new Server(httpServer, {
 game(io)
 
 const log = console.log
-const colors = ["red", "blue", "yellow"]
-colors.forEach((color) => (log[color] = (msg) => log(chalk[color](msg))))
+const colors = ["red", "blue", "yellow", "green", "orange", "pink", "purple"]
+colors.forEach((color) => (log[color] = (...msg) => log(chalk[color](...msg))))
 
 httpServer.listen(port, () => {
   log.blue(`Server started, listening on port ${port}!`)
@@ -74,3 +74,5 @@ function onListening() {
   const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port
   log("Listening on " + bind)
 }
+
+export { log }
