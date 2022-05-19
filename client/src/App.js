@@ -37,7 +37,8 @@ import {
   ListGroup,
   Alert,
   OverlayTrigger,
-  Tooltip
+  Tooltip,
+  Badge
 } from "react-bootstrap"
 import clsx from "clsx"
 
@@ -46,6 +47,7 @@ import soundLobby from "audio/lobby-2.m4a"
 import soundValid from "audio/valid.mp3"
 import soundInvalid from "audio/error.mp3"
 import soundJoining from "audio/joining.mp3"
+import soundLeaving from "audio/leaving.mp3"
 import soundGainedHeart from "audio/gained-heart.mp3"
 import soundWinner from "audio/winner.mp3"
 
@@ -100,7 +102,8 @@ const useGameStore = create(
 
 const Highlight = (props) => (
   <Highlighter
-    highlightTag="span"
+    highlightTag="strong"
+    unhighlightClassName="fw-bold"
     highlightClassName="text-danger"
     autoEscape={true}
     {...props}
@@ -212,7 +215,7 @@ const LayoutWithHeader = ({ children, ...props }) => (
 const Layout = ({ children, className, ...props }) => {
   return (
     <Container
-      className={clsx("my-lg-5 my-3 text-center", className)}
+      className={clsx("my-lg-5 mt-3 mb-5 text-center", className)}
       {...props}
     >
       {children}
@@ -253,23 +256,26 @@ const Home = () => {
   )
 }
 
-const Rules = ({ className }) => (
-  <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
-    <h5>🧐 Rules</h5>
-    <p className="mx-auto small">
-      On a player's turn they must type a word (more than 2 characters)
-      containing the given letters in order before the bomb explodes (example:
-      LU - BLUE).
-    </p>
-    <p className="mx-auto small">
-      If a player does not type a word in time, they lose a life 💀. The last
-      player remaining wins the game 🎉.
-    </p>
-    <p className="mx-auto small mb-0">
-      The alphabet is at the top, use all the letters to gain a heart ❤️.
-    </p>
-  </Alert>
-)
+const Rules = ({ className }) => {
+  const { setIsAdmin } = useSocket()
+  return (
+    <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
+      <h5>Rules 🧐</h5>
+      <p className="mx-auto small">
+        On a player's turn they must type a word (more than 2 characters)
+        containing the given letters in order before the bomb explodes{" "}
+        <span onClick={() => setIsAdmin(true)}>🤯</span> (example: LU - BLUE).
+      </p>
+      <p className="mx-auto small">
+        If a player does not type a word in time, they lose a life 💀. The last
+        player remaining wins the game 🎉.
+      </p>
+      <p className="mx-auto small mb-0">
+        The alphabet is at the top, use all the letters to gain a heart ❤️.
+      </p>
+    </Alert>
+  )
+}
 
 function ValidateRoom() {
   const { roomId } = useParams()
@@ -295,6 +301,7 @@ export const useSocket = () => useContext(SocketContext)
 const InitializeSocket = () => {
   const { roomId } = useParams()
   const [socket, setSocket] = useState(undefined)
+  const [isAdmin, setIsAdmin] = useState()
   const name = useGameStore((state) => state.name)
   const userId = useGameStore((state) => state.userId)
   const hasSocket = socket?.id
@@ -339,7 +346,7 @@ const InitializeSocket = () => {
   }
 
   return (
-    <SocketContext.Provider value={{ socket, userId }}>
+    <SocketContext.Provider value={{ socket, userId, isAdmin, setIsAdmin }}>
       <InitializeRoom />
     </SocketContext.Provider>
   )
@@ -514,15 +521,33 @@ function HeartLetters() {
     return null
   }
 
+  // return (
+  //   <div style={{ maxWidth: "400px" }} className="m-auto">
+  //     {[...letters].map((letter) => (
+  //       <Button
+  //         as={"span"}
+  //         size="sm"
+  //         key={letter}
+  //         variant={userLetters.includes(letter) ? "dark" : "outline-secondary"}
+  //         className={`disabled rounded-0 position-relative`}
+  //         style={{ width: "31px", marginRight: "-1px", marginBottom: "-1px" }}
+  //       >
+  //         {letter.toUpperCase()}
+  //       </Button>
+  //     ))}
+  //   </div>
+  // )
+
   return (
-    <div>
+    <div style={{ maxWidth: "477px" }} className="m-auto">
       {[...letters].map((letter) => (
         <Button
           as={"span"}
           size="sm"
           key={letter}
-          variant={userLetters.includes(letter) ? "dark" : "outline-dark"}
+          variant={userLetters.includes(letter) ? "dark" : "outline-secondary"}
           className={`disabled me-1 mb-1`}
+          style={{ width: "31px" }}
         >
           {letter.toUpperCase()}
         </Button>
@@ -658,6 +683,7 @@ function GameSettings() {
                 variant={notification ? "success" : "secondary"}
                 className="w-100"
                 disabled={running}
+                size="sm"
               >
                 {notification ? "Updated!" : "Change settings"}
               </Button>
@@ -742,20 +768,24 @@ function Game() {
 
   return (
     <>
-      <div className="mb-3">
+      <div className="">
         <Stack
           className="position-relative justify-content-center align-items-center mb-3"
           gap={3}
           direction="horizontal"
         >
           {!running && (
-            <Button
-              variant={isInGame ? "danger" : "primary"}
-              onClick={() => (isInGame ? leaveGame() : joinGame())}
-              className=""
-            >
-              {isInGame ? "Leave game" : "Join game"}
-            </Button>
+            <>
+              {isInGame ? (
+                <Button variant="danger" onClick={() => leaveGame()}>
+                  Leave game
+                </Button>
+              ) : (
+                <Button variant="primary" onClick={() => joinGame()}>
+                  Join game
+                </Button>
+              )}
+            </>
           )}
           {isInGame && (
             <Button
@@ -768,12 +798,11 @@ function Game() {
           )}
         </Stack>
         {!running && !winner && <Rules />}
-        <Rounds />
         <HeartLetters />
         {running && (
           <div className="my-3 position-relative">
             {boom && (
-              <div className="strong text-secondary position-absolute start-0 end-0 top-0 letterblend-fade">
+              <div className="text-secondary position-absolute start-0 end-0 top-0 letterblend-fade">
                 <Highlight
                   searchWords={[boomLetterBlend?.toUpperCase()]}
                   textToHighlight={boomWord?.toUpperCase() || ""}
@@ -787,11 +816,11 @@ function Game() {
                 className="position-absolute text-white"
                 style={{
                   zIndex: "1",
-                  fontSize: "1.5em",
-                  top: "35px",
+                  fontSize: "1.2em",
+                  top: "27px",
                   bottom: 0,
                   left: "-20px",
-                  right: 0
+                  right: "-3px"
                 }}
               >
                 {timer}
@@ -802,7 +831,7 @@ function Game() {
                     "animate__animated animate__infinite animate__pulse"
                   )}
                   style={{
-                    maxWidth: "100px",
+                    maxWidth: "80px",
                     fill: hardMode ? "var(--bs-danger)" : "initial"
                   }}
                 />
@@ -841,21 +870,27 @@ function Rounds() {
   const { room } = useRoom()
   const round = room.get("round")
   const running = room.get("running")
-  const winner = room.get("winner")
   const hardMode = room.get("hardMode")
 
-  if (!running && !winner) {
+  if (!running) {
     return null
   }
 
   return (
-    <div className={clsx(hardMode && "text-danger")}>
+    <div
+      style={{ top: "-2em" }}
+      className={clsx(hardMode && "text-danger", "position-absolute")}
+    >
       Round <strong>{round}</strong>
     </div>
   )
 }
 
 function Winner({ winner }) {
+  const { room } = useRoom()
+  const round = room.get("round")
+  const hardMode = room.get("hardMode")
+
   const ref = React.useRef()
   const refCallback = React.useCallback((node) => {
     if (ref.current) {
@@ -877,17 +912,28 @@ function Winner({ winner }) {
   }, [])
 
   return (
-    <h3>
-      Winner!
-      <div className="mt-2 display-3 animate__animated animate__bounceIn">
+    <div>
+      <div className="mt-2 animate__animated animate__bounceIn">
         <Avatar
           className="animate__animated animate__infinite animate__pulse animate__slow"
-          style={{ width: "3em", marginBottom: "-.25em" }}
+          style={{ width: "10em", marginBottom: "-.5em" }}
           id={winner.avatar}
         />
-        <div ref={refCallback}>{winner.name}</div>
+        <h3>
+          Winner!{" "}
+          <Badge
+            bg={hardMode ? "danger" : "primary"}
+            className="align-middle"
+            style={{ fontSize: ".5em" }}
+          >
+            Round {round}
+          </Badge>
+        </h3>
+        <div className="display-3" ref={refCallback}>
+          {winner.name}
+        </div>
       </div>
-    </h3>
+    </div>
   )
 }
 
@@ -968,7 +1014,7 @@ function PlayerInput() {
     <>
       <Form
         onSubmit={submitForm}
-        className="d-flex justify-content-center mt-1 mb-4 flex-column m-auto position-relative"
+        className="d-flex justify-content-center mt-1 mb-2 flex-column m-auto position-relative"
         style={{ maxWidth: "20em" }}
       >
         <Form.Control
@@ -979,12 +1025,19 @@ function PlayerInput() {
           disabled={!isCurrentPlayer}
           {...(!isCurrentPlayer && { value: deferredValue })}
         />
-        <Form.Text
-          className="text-danger fw-bold position-absolute top-100 start-50 w-100"
-          style={{ transform: "translate(-50%, 7%)" }}
-        >
-          {errorReason}
-        </Form.Text>
+        {errorReason && (
+          <Badge
+            bg="danger"
+            className="position-absolute top-100 start-50"
+            style={{
+              transform: "translate(-50%, -50%)",
+              zIndex: 20,
+              fontSize: "1em"
+            }}
+          >
+            {errorReason}
+          </Badge>
+        )}
       </Form>
     </>
   )
@@ -1012,7 +1065,7 @@ const useHowl = (src, type = "effect", props) => {
 }
 
 function Players() {
-  const { socket } = useSocket()
+  const { socket, isAdmin } = useSocket()
   const { room } = useRoom()
   const players = room.get("users")
   const running = room.get("running")
@@ -1023,6 +1076,7 @@ function Players() {
   const [boomControls] = useHowl(soundBoom)
   const [winnerControls] = useHowl(soundWinner)
   const [userJoinedControls] = useHowl(soundJoining)
+  const [userLeftControls] = useHowl(soundLeaving)
   const [gainedHeartControls] = useHowl(soundGainedHeart)
 
   const validation = useWordValidation(500, (isValid) => {
@@ -1037,15 +1091,18 @@ function Players() {
     const triggerGainedHeart = () => gainedHeartControls.play()
     const triggerBoom = () => boomControls.play()
     const triggerUserJoined = () => userJoinedControls.play()
+    const userLeft = () => userLeftControls.play()
     const triggerWinner = () => winnerControls.play()
 
     socket.on("gainedHeart", triggerGainedHeart)
     socket.on("userJoined", triggerUserJoined)
+    socket.on("userLeft", userLeft)
     socket.on("winner", triggerWinner)
     socket.on("boom", triggerBoom)
     return () => {
       socket.off("gainedHeart", triggerGainedHeart)
       socket.off("userJoined", triggerUserJoined)
+      socket.off("userLeft", userLeft)
       socket.off("winner", triggerWinner)
       socket.off("boom", triggerBoom)
     }
@@ -1059,10 +1116,16 @@ function Players() {
       ? "text-success"
       : false
 
+  const kickPlayer = (userId) => socket.emit("kickPlayer", userId)
+
   return (
     <div>
-      <h5>Players</h5>
-      <ListGroup style={{ maxWidth: "30em" }} className="m-auto">
+      {!running && <h5>Players</h5>}
+      <ListGroup
+        style={{ maxWidth: "30em" }}
+        className="m-auto position-relative"
+      >
+        <Rounds />
         {Array.from(players)
           .filter(([_, val]) => val.inGame)
           .map(([id, value]) => (
@@ -1087,6 +1150,15 @@ function Players() {
                 {running &&
                   (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
               </span>
+              {isAdmin && (
+                <span
+                  className="position-absolute top-50 end-0"
+                  style={{ width: "35px", transform: `translate(100%, -50%)` }}
+                  onClick={() => kickPlayer(id)}
+                >
+                  🥾
+                </span>
+              )}
               <span
                 className={clsx(
                   id === currentPlayer && "fw-bold",

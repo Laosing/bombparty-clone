@@ -30,6 +30,7 @@ function connection(io, socket) {
 
   socket.join(roomId)
 
+  socket.on("kickPlayer", (userId) => kickPlayer(userId))
   socket.on("joinGame", () => joinGame())
   socket.on("leaveGame", () => leaveGame())
   socket.on("setSettings", (value) => setSettings(value))
@@ -47,11 +48,19 @@ function connection(io, socket) {
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
+  function kickPlayer(userId) {
+    const { users } = getRoom()
+    const user = users.get(userId)
+    users.set(userId, { ...user, inGame: false })
+    relayRoom()
+  }
+
   function joinGame() {
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: true })
+    io.sockets.in(roomId).emit("userJoined", userId)
     relayRoom()
   }
 
@@ -60,6 +69,7 @@ function connection(io, socket) {
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: false })
+    io.sockets.in(roomId).emit("userLeft", userId)
     relayRoom()
   }
 
@@ -239,7 +249,11 @@ function connection(io, socket) {
   }
 
   function startGame() {
-    const { room, settings, timerConstructor } = getRoom()
+    const { room, settings, timerConstructor, users } = getRoom()
+
+    // No players, don't start the game
+    if ([...users].filter(([, val]) => val.inGame).length <= 0) return
+
     const startTimer = settings.get("timer")
     room
       .set("timer", startTimer)
@@ -306,6 +320,7 @@ function connection(io, socket) {
       room.set("startingPlayer", currentPlayer)
     }
     if (currentPlayer === startingPlayer) {
+      if (players.length === 1) return incrementRound()
       if (_firstRound) {
         _firstRound = false
       } else {
@@ -322,6 +337,7 @@ function connection(io, socket) {
       room.set("hardMode", true)
     }
     room.set("round", newRound)
+    relayRoom()
   }
 
   function getNextPlayer(collection) {
@@ -403,7 +419,6 @@ function connection(io, socket) {
       avatar: nanoid(),
       inGame: false
     })
-    io.sockets.in(roomId).emit("userJoined", userId)
   }
 
   function setSettings(data) {

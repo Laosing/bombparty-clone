@@ -38,6 +38,8 @@ body,
   z-index: 10;
   animation: boom 0.15s ease;
   animation-fill-mode: forwards;
+  width: 50%;
+  margin: auto;
 }
 
 .bombEntrance {
