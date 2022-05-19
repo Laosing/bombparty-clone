@@ -8,21 +8,14 @@ import { log } from "./index.js"
 // import dictionary from "./data/wordlist.json" assert { type: "json" }
 const dictionary = JSON.parse(readFileSync("./data/wordlist.json"))
 
-const fetchRandomLetters = getRandomLettersFn(Object.keys(dictionary))
+const getRandomLetters = getRandomLettersFn(Object.keys(dictionary))
 
 const rooms = new Map()
 
 function connection(io, socket) {
   const { roomId } = socket.handshake.query
 
-  let _word = ""
   let _firstRound = true
-
-  const getRandomLetters = () => {
-    const [letters, word] = fetchRandomLetters()
-    _word = word
-    return letters
-  }
 
   getRoom()
   initializeUser()
@@ -30,9 +23,9 @@ function connection(io, socket) {
 
   socket.join(roomId)
 
-  socket.on("kickPlayer", (userId) => kickPlayer(userId))
-  socket.on("joinGame", () => joinGame())
-  socket.on("leaveGame", () => leaveGame())
+  socket.on("joinGame", (userId) => joinGame(userId))
+  socket.on("leaveGame", (userId) => leaveGame(userId))
+  socket.on("kickPlayer", (userId) => leaveGame(userId))
   socket.on("setSettings", (value) => setSettings(value))
   socket.on("checkWord", (value, userId) => checkWord(value, userId))
   socket.on("setGlobalInputText", (value) => setGlobalInputText(value))
@@ -48,13 +41,6 @@ function connection(io, socket) {
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
-  function kickPlayer(userId) {
-    const { users } = getRoom()
-    const user = users.get(userId)
-    users.set(userId, { ...user, inGame: false })
-    relayRoom()
-  }
-
   function joinGame() {
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
@@ -64,13 +50,19 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function leaveGame() {
-    const { userId } = socket.handshake.auth
+  function leaveGame(userId) {
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: false })
-    io.sockets.in(roomId).emit("userLeft", userId)
     relayRoom()
+  }
+
+  function setLetterBlend() {
+    const { room } = getRoom()
+    const [letters, word] = getRandomLetters()
+    log.magenta("word:", word)
+    room.set("letterBlend", letters)
+    room.set("letterBlendWord", word)
   }
 
   function relayRoom() {
@@ -119,15 +111,8 @@ function connection(io, socket) {
   }
 
   function checkWord(value, userId) {
-    const {
-      roomId,
-      room,
-      letterBlend,
-      words,
-      currentPlayer,
-      timerConstructor
-    } = getRoom()
-
+    const { roomId, letterBlend, words, currentPlayer, timerConstructor } =
+      getRoom()
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = !!dictionary[value]
     const isUnique = !words.has(value)
@@ -141,7 +126,7 @@ function connection(io, socket) {
       isLongEnough &&
       isCurrentPlayer
     ) {
-      console.log(`valid word: ${value}`)
+      log.green(`valid word: ${value}`)
       io.sockets
         .in(roomId)
         .emit("wordValidation", true, { value, letterBlend, currentPlayer })
@@ -149,11 +134,11 @@ function connection(io, socket) {
       setPlayerText(userId, value)
       setUserLetters(userId, value)
       resetletterBlendCounter()
-      room.set("letterBlend", getRandomLetters())
+      setLetterBlend()
       timerConstructor.reset()
       switchPlayer()
     } else {
-      console.log(`invalid word: ${value}`)
+      log.green(`invalid word: ${value}`)
       io.sockets.in(roomId).emit("wordValidation", false, {
         isBlend,
         isDictionary,
@@ -213,13 +198,21 @@ function connection(io, socket) {
     const { room, timerConstructor } = getRoom()
     const { seconds } = timerConstructor.getTimeValues()
     room.set("timer", seconds)
-    relayRoom()
+    if (seconds > 0) {
+      relayRoom()
+    }
   }
 
   function updateSecondsTimer() {
-    const { timerConstructor, currentPlayer, letterBlend, letterBlendCounter } =
-      getRoom()
-    const wordDetails = letterBlendCounter <= 1 ? [letterBlend, _word] : []
+    const {
+      timerConstructor,
+      currentPlayer,
+      letterBlend,
+      letterBlendWord,
+      letterBlendCounter
+    } = getRoom()
+    const wordDetails =
+      letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : []
     io.sockets.in(roomId).emit("boom", [currentPlayer, ...wordDetails])
     loseLife()
     const hasWinner = checkGameState()
@@ -243,8 +236,8 @@ function connection(io, socket) {
     room.set("letterBlendCounter", counter)
     if (counter <= 0) {
       const settingsLetterBlendCounter = settings.get("letterBlendCounter")
-      room.set("letterBlend", getRandomLetters())
       room.set("letterBlendCounter", settingsLetterBlendCounter)
+      setLetterBlend()
     }
   }
 
@@ -258,13 +251,13 @@ function connection(io, socket) {
     room
       .set("timer", startTimer)
       .set("running", true)
-      .set("letterBlend", getRandomLetters())
       .set("words", new Set())
       .set("round", 1)
       .set("hardMode", false)
       .set("startingPlayer", "")
 
     _firstRound = true
+    setLetterBlend()
     resetletterBlendCounter()
     resetUser()
     switchPlayer()
@@ -301,6 +294,7 @@ function connection(io, socket) {
       .set("running", false)
       .set("currentPlayer", "")
       .set("letterBlend", "")
+      .set("letterBlendWord", "")
     relayRoom()
   }
 
@@ -337,7 +331,6 @@ function connection(io, socket) {
       room.set("hardMode", true)
     }
     room.set("round", newRound)
-    relayRoom()
   }
 
   function getNextPlayer(collection) {
@@ -391,6 +384,8 @@ function connection(io, socket) {
       users: setProp("users", new Map()),
       words: setProp("words", new Set()),
       letterBlend: setProp("letterBlend", ""),
+      letterBlendWord: setProp("letterBlendWord", ""),
+      letterBlendCounter: setProp("letterBlendCounter", 0),
       timerConstructor: setProp(
         "timerConstructor",
         new Timer({ countdown: true })
@@ -402,7 +397,6 @@ function connection(io, socket) {
       startingPlayer: setProp("startingPlayer", ""),
       running: setProp("running", false),
       winner: setProp("winner", null),
-      letterBlendCounter: setProp("letterBlendCounter", 0),
       settings: setProp("settings", new Map())
     }
 
@@ -455,21 +449,24 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function removeUserFromGame() {
-    const { userId } = socket.handshake.auth
+  function removeUserFromGame(userId) {
     const { users } = getRoom()
     users.delete(userId)
   }
 
   function disconnect(reason) {
     console.log({ reason })
+    const { userId } = socket.handshake.auth
     const { users } = getRoom()
-    removeUserFromGame()
+    leaveGame(userId)
+    removeUserFromGame(userId)
+    // Stop game if no users left
     if ([...users].filter(([, val]) => val.inGame) <= 0) {
       stopGame()
     }
     // socket.leave(roomId)
     // socket.disconnect(true)
+    io.sockets.in(roomId).emit("userLeft", userId)
     relayRoom()
   }
 }

@@ -26,7 +26,6 @@ function random3Letters(letters) {
 }
 
 function randomLetters(items, chance = 0.7) {
-  console.log("word:", items)
   const letters = [...items]
   if (Math.random() > chance) {
     return random3Letters(letters)

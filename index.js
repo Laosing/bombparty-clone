@@ -22,7 +22,7 @@ const io = new Server(httpServer, {
 game(io)
 
 const log = console.log
-const colors = ["red", "blue", "yellow", "green", "orange", "pink", "purple"]
+const colors = ["red", "blue", "yellow", "green", "magenta"]
 colors.forEach((color) => (log[color] = (...msg) => log(chalk[color](...msg))))
 
 httpServer.listen(port, () => {

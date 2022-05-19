@@ -751,8 +751,8 @@ function Game() {
     }
   }
 
-  const joinGame = () => socket.emit("joinGame")
-  const leaveGame = () => socket.emit("leaveGame")
+  const joinGame = () => socket.emit("joinGame", userId)
+  const leaveGame = () => socket.emit("leaveGame", userId)
 
   useEffect(() => {
     if (running) {
