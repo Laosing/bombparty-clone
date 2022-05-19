@@ -919,7 +919,7 @@ function Winner({ winner }) {
           style={{ width: "10em", marginBottom: "-.5em" }}
           id={winner.avatar}
         />
-        <h3>
+        <h3 className="mb-0">
           Winner!{" "}
           <Badge
             bg={hardMode ? "danger" : "primary"}
@@ -929,7 +929,7 @@ function Winner({ winner }) {
             Round {round}
           </Badge>
         </h3>
-        <div className="display-3" ref={refCallback}>
+        <div className="display-3 mb-3" ref={refCallback}>
           {winner.name}
         </div>
       </div>
