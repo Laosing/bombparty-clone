@@ -2,7 +2,7 @@
 
 import { Server } from "socket.io"
 import http from "http"
-import chalk from "chalk"
+import ansi from "ansi-colors"
 
 import { app } from "./app.js"
 import game from "./game.js"
@@ -23,7 +23,7 @@ game(io)
 
 const log = console.log
 const colors = ["red", "blue", "yellow", "green", "magenta"]
-colors.forEach((color) => (log[color] = (...msg) => log(chalk[color](...msg))))
+colors.forEach((color) => (log[color] = (...msg) => log(ansi[color](...msg))))
 
 httpServer.listen(port, () => {
   log.blue(`Server started, listening on port ${port}!`)

@@ -306,8 +306,6 @@ const InitializeSocket = () => {
   const userId = useGameStore((state) => state.userId)
   const hasSocket = socket?.id
 
-  console.log({ hasSocket })
-
   useEffect(() => {
     if (!hasSocket) {
       const logger = (event, ...args) => {
@@ -741,6 +739,8 @@ function Game() {
     autoplay: true
   })
 
+  const [[boom, boomLetterBlend, boomWord], resetBoom] = useEventTimeout("boom")
+
   const toggleGame = () => {
     if (running) {
       console.log("STOP!")
@@ -758,13 +758,11 @@ function Game() {
     if (running) {
       lobbyMusic.stop()
     } else {
+      resetBoom()
       const sound = lobbyMusic.play()
       lobbyMusic.fade(0, 1, 2000, sound)
     }
-  }, [running, lobbyMusic])
-
-  const [boom, boomLetterBlend, boomWord] = useEventTimeout("boom", 950)
-  const [boomAnimation] = useEventTimeout("boom", 300)
+  }, [running, lobbyMusic, resetBoom])
 
   return (
     <>
@@ -801,14 +799,15 @@ function Game() {
         <HeartLetters />
         {running && (
           <div className="my-3 position-relative">
-            {boom && (
-              <div className="text-secondary position-absolute start-0 end-0 top-0 letterblend-fade">
-                <Highlight
-                  searchWords={[boomLetterBlend?.toUpperCase()]}
-                  textToHighlight={boomWord?.toUpperCase() || ""}
-                />
-              </div>
-            )}
+            <div
+              key={boomWord}
+              className="text-secondary position-absolute start-0 end-0 top-0 letterblend-fade"
+            >
+              <Highlight
+                searchWords={[boomLetterBlend?.toUpperCase()]}
+                textToHighlight={boomWord?.toUpperCase() || ""}
+              />
+            </div>
             <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
             <div className="h3 position-relative ">
@@ -825,7 +824,7 @@ function Game() {
               >
                 {timer}
               </div>
-              <div className={clsx(boomAnimation ? "boom" : "bombEntrance")}>
+              <div className={clsx(boom ? "boom" : "bombEntrance")}>
                 <Bombsvg
                   className={clsx(
                     "animate__animated animate__infinite animate__pulse"
@@ -850,10 +849,22 @@ const useEventTimeout = (event, timeout = 300) => {
   const { socket } = useSocket()
   const [state, setState] = useState([])
 
+  const resetState = React.useCallback(
+    () =>
+      setState((prev) => {
+        clearTimeout(prev[3])
+        return []
+      }),
+    []
+  )
+
   useEffect(() => {
     const triggerEvent = (data) => {
-      setState(data)
-      setTimeout(() => setState([]), timeout)
+      const timer = setTimeout(
+        () => setState([false, data[1], data[2]]),
+        timeout
+      )
+      setState([...data, timer])
     }
 
     socket.on(event, triggerEvent)
@@ -863,7 +874,7 @@ const useEventTimeout = (event, timeout = 300) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return state
+  return [state, resetState]
 }
 
 function Rounds() {

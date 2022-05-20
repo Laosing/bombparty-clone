@@ -231,12 +231,11 @@ function connection(io, socket) {
   }
 
   function switchletterBlend() {
-    const { room, letterBlendCounter, settings } = getRoom()
+    const { room, letterBlendCounter } = getRoom()
     const counter = letterBlendCounter - 1
     room.set("letterBlendCounter", counter)
     if (counter <= 0) {
-      const settingsLetterBlendCounter = settings.get("letterBlendCounter")
-      room.set("letterBlendCounter", settingsLetterBlendCounter)
+      resetletterBlendCounter()
       setLetterBlend()
     }
   }
