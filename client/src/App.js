@@ -258,13 +258,14 @@ const Home = () => {
 
 const Rules = ({ className }) => {
   const { setIsAdmin } = useSocket()
+  const toggleAdmin = () => setIsAdmin((p) => !p)
   return (
     <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
       <h5>Rules 🧐</h5>
       <p className="small">
         On a player's turn they must type a word (3 characters or more)
         containing the given letters in order before the bomb explodes{" "}
-        <span onClick={() => setIsAdmin(true)}>🤯</span> (example: LU - BLUE).
+        <span onClick={toggleAdmin}>🤯</span> (example: LU - BLUE).
       </p>
       <p className="small">
         If a player does not type a word in time, they lose a life 💀. The last
@@ -812,27 +813,31 @@ function Game() {
             )}
             <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
-            <div className="h3 position-relative ">
+            <div
+              className="h3 position-relative m-auto"
+              style={{ maxWidth: "80px" }}
+            >
               <div
-                className="position-absolute text-white"
+                className="position-absolute text-white position-absolute top-50 start-50 translate-middle"
                 style={{
                   zIndex: "1",
-                  fontSize: "1.2em",
-                  top: "27px",
-                  bottom: 0,
-                  left: "-20px",
-                  right: "-3px"
+                  fontSize: "1.2em"
                 }}
               >
                 {timer}
               </div>
-              <div className={clsx(boom ? "boom" : "bombEntrance")}>
+              <div
+                className={clsx(
+                  boom ? "boom" : "bombEntrance",
+                  "position-relative"
+                )}
+                style={{ right: "-0.3em", bottom: "0.2em" }}
+              >
                 <Bombsvg
                   className={clsx(
                     "animate__animated animate__infinite animate__pulse"
                   )}
                   style={{
-                    maxWidth: "80px",
                     fill: hardMode ? "var(--bs-danger)" : "initial"
                   }}
                 />
@@ -1135,84 +1140,91 @@ function Players() {
   return (
     <div>
       {!running && <h5>Players</h5>}
-      <ListGroup
-        style={{ maxWidth: "30em" }}
-        className="m-auto position-relative"
-      >
+      <div style={{ maxWidth: "30em" }} className="m-auto position-relative">
         <Rounds />
-        {Array.from(players)
-          .filter(([_, val]) => val.inGame)
-          .map(([id, value]) => (
-            <Stack
-              direction="horizontal"
-              gap={2}
-              key={id}
-              className={clsx(
-                "position-relative",
-                "list-group-item",
-                running &&
-                  value.lives <= 0 &&
-                  "list-group-item-secondary text-decoration-line-through",
-                id === currentPlayer && "list-group-item-primary"
-              )}
-            >
-              <span
-                className="position-absolute top-50 start-0"
-                style={{ width: "35px", transform: `translate(-120%, -50%)` }}
-              >
-                {!running && <Avatar id={value.avatar} />}
-                {running &&
-                  (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
-              </span>
-              {isAdmin && (
-                <span
-                  className="position-absolute top-50 end-0"
-                  style={{ width: "35px", transform: `translate(100%, -50%)` }}
-                  onClick={() => kickPlayer(id)}
-                >
-                  🥾
-                </span>
-              )}
-              <span
+        <ListGroup>
+          {Array.from(players)
+            .filter(([_, val]) => val.inGame)
+            .map(([id, value]) => (
+              <Stack
+                direction="horizontal"
+                gap={2}
+                key={id}
                 className={clsx(
-                  id === currentPlayer && "fw-bold",
-                  id === validation.currentPlayer && textColor
+                  "position-relative",
+                  "list-group-item",
+                  running &&
+                    value.lives <= 0 &&
+                    "list-group-item-secondary text-decoration-line-through",
+                  id === currentPlayer && "list-group-item-primary"
                 )}
               >
-                {id === currentPlayer && (
-                  <span className="position-absolute top-50 start-0 translate-middle">
-                    💣
+                <span
+                  className="position-absolute top-50 start-0"
+                  style={{ width: "35px", transform: `translate(-120%, -50%)` }}
+                >
+                  {!running && <Avatar id={value.avatar} />}
+                  {running &&
+                    (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
+                  <Badge
+                    className="position-absolute top-0 start-100 translate-middle"
+                    bg={
+                      highestScore > 0 && value.score === highestScore
+                        ? "primary"
+                        : "secondary"
+                    }
+                    style={{ fontSize: ".65em" }}
+                  >
+                    {value.score}
+                  </Badge>
+                </span>
+                {isAdmin && (
+                  <span
+                    className="position-absolute top-50 end-0"
+                    style={{
+                      width: "35px",
+                      transform: `translate(100%, -50%)`
+                    }}
+                    onClick={() => kickPlayer(id)}
+                  >
+                    🥾
                   </span>
                 )}
-                {value.name}
-              </span>
-              <Badge
-                bg={
-                  highestScore > 0 && value.score === highestScore
-                    ? "primary"
-                    : "secondary"
-                }
-              >
-                {value.score}
-              </Badge>
-              {running && (
-                <span className="text-danger">
-                  {Array.from(Array(Number(value?.lives) || 0), (_, index) => (
-                    <span key={index}>❤</span>
-                  ))}
+                <span
+                  className={clsx(
+                    id === currentPlayer && "fw-bold",
+                    id === validation.currentPlayer && textColor
+                  )}
+                >
+                  {id === currentPlayer && (
+                    <span className="position-absolute top-50 start-100 translate-middle">
+                      💣
+                    </span>
+                  )}
+                  {value.name}
                 </span>
-              )}
-              {running && id !== currentPlayer && (
-                <span className="ms-auto small">
-                  <Highlight
-                    searchWords={[value.letterBlend]}
-                    textToHighlight={value.text}
-                  />
-                </span>
-              )}
-            </Stack>
-          ))}
-      </ListGroup>
+                {running && (
+                  <span className="text-danger">
+                    {Array.from(
+                      Array(Number(value?.lives) || 0),
+                      (_, index) => (
+                        <span key={index}>❤</span>
+                      )
+                    )}
+                  </span>
+                )}
+                {running && id !== currentPlayer && (
+                  <span className="ms-auto small">
+                    <Highlight
+                      searchWords={[value.letterBlend]}
+                      textToHighlight={value.text}
+                    />
+                  </span>
+                )}
+              </Stack>
+            ))}
+        </ListGroup>
+      </div>
     </div>
   )
 }

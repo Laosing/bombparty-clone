@@ -59,7 +59,7 @@ function connection(io, socket) {
   function setLetterBlend() {
     const { room } = getRoom()
     const [letters, word] = getRandomLetters()
-    log.magenta("word:", word)
+    log.magenta("word", word)
     room.set("letterBlend", letters)
     room.set("letterBlendWord", word)
   }

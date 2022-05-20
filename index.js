@@ -23,7 +23,10 @@ game(io)
 
 const log = console.log
 const colors = ["red", "blue", "yellow", "green", "magenta"]
-colors.forEach((color) => (log[color] = (...msg) => log(ansi[color](...msg))))
+colors.forEach(
+  (color) =>
+    (log[color] = (...msg) => log(ansi[color](`${[...msg].join(" : ")}`)))
+)
 
 httpServer.listen(port, () => {
   log.blue(`Server started, listening on port ${port}!`)
