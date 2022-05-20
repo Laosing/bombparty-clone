@@ -41,11 +41,10 @@ function connection(io, socket) {
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
-  function joinGame() {
-    const { userId } = socket.handshake.auth
+  function joinGame(userId) {
     const { users } = getRoom()
     const user = users.get(userId)
-    users.set(userId, { ...user, inGame: true })
+    users.set(userId, { ...user, inGame: true, score: 0 })
     io.sockets.in(roomId).emit("userJoined", userId)
     relayRoom()
   }
@@ -195,7 +194,14 @@ function connection(io, socket) {
   }
 
   function updateTimer() {
-    const { room, timerConstructor } = getRoom()
+    const { room, timerConstructor, users, currentPlayer } = getRoom()
+
+    const leftGame = !Array.from(users).find(([id]) => id === currentPlayer)
+    if (leftGame) {
+      switchPlayer()
+      timerConstructor.reset()
+    }
+
     const { seconds } = timerConstructor.getTimeValues()
     room.set("timer", seconds)
     if (seconds > 0) {
@@ -212,7 +218,7 @@ function connection(io, socket) {
       letterBlendCounter
     } = getRoom()
     const wordDetails =
-      letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : []
+      letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : ["", ""]
     io.sockets.in(roomId).emit("boom", [currentPlayer, ...wordDetails])
     loseLife()
     const hasWinner = checkGameState()
@@ -278,7 +284,8 @@ function connection(io, socket) {
     const hasWinner = players.length === 1 ? singlePlayer : lastPlayer
     if (hasWinner) {
       io.sockets.in(roomId).emit("winner", true)
-      const [, winner] = remainingPlayers[0] || players[0]
+      const [userId, winner] = remainingPlayers[0] || players[0]
+      users.set(userId, { ...winner, score: winner.score + 1 })
       stopGame(winner)
     }
     return hasWinner
@@ -410,7 +417,8 @@ function connection(io, socket) {
       name,
       letters: new Set(),
       avatar: nanoid(),
-      inGame: false
+      inGame: false,
+      score: 0
     })
   }
 

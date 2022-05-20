@@ -261,16 +261,16 @@ const Rules = ({ className }) => {
   return (
     <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
       <h5>Rules 🧐</h5>
-      <p className="mx-auto small">
-        On a player's turn they must type a word (more than 2 characters)
+      <p className="small">
+        On a player's turn they must type a word (3 characters or more)
         containing the given letters in order before the bomb explodes{" "}
         <span onClick={() => setIsAdmin(true)}>🤯</span> (example: LU - BLUE).
       </p>
-      <p className="mx-auto small">
+      <p className="small">
         If a player does not type a word in time, they lose a life 💀. The last
         player remaining wins the game 🎉.
       </p>
-      <p className="mx-auto small mb-0">
+      <p className="small mb-0">
         The alphabet is at the top, use all the letters to gain a heart ❤️.
       </p>
     </Alert>
@@ -799,15 +799,17 @@ function Game() {
         <HeartLetters />
         {running && (
           <div className="my-3 position-relative">
-            <div
-              key={boomWord}
-              className="text-secondary position-absolute start-0 end-0 top-0 letterblend-fade"
-            >
-              <Highlight
-                searchWords={[boomLetterBlend?.toUpperCase()]}
-                textToHighlight={boomWord?.toUpperCase() || ""}
-              />
-            </div>
+            {boomWord && (
+              <div
+                key={boomWord}
+                className="text-secondary position-absolute start-0 end-0 top-0 letterblend-fade"
+              >
+                <Highlight
+                  searchWords={[boomLetterBlend?.toUpperCase()]}
+                  textToHighlight={boomWord?.toUpperCase()}
+                />
+              </div>
+            )}
             <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
             <div className="h3 position-relative ">
@@ -1128,6 +1130,7 @@ function Players() {
       : false
 
   const kickPlayer = (userId) => socket.emit("kickPlayer", userId)
+  const highestScore = Math.max(...[...players].map(([, val]) => val.score))
 
   return (
     <div>
@@ -1183,6 +1186,15 @@ function Players() {
                 )}
                 {value.name}
               </span>
+              <Badge
+                bg={
+                  highestScore > 0 && value.score === highestScore
+                    ? "primary"
+                    : "secondary"
+                }
+              >
+                {value.score}
+              </Badge>
               {running && (
                 <span className="text-danger">
                   {Array.from(Array(Number(value?.lives) || 0), (_, index) => (
