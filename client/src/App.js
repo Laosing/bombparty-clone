@@ -833,13 +833,14 @@ function Game() {
             <PlayerInput />
             <div
               className="h3 position-relative m-auto"
-              style={{ maxWidth: "80px" }}
+              style={{ maxWidth: "80px", height: "80px" }}
             >
               <div
-                className="position-absolute text-white position-absolute top-50 start-50 translate-middle"
+                className="position-absolute text-white position-absolute top-50 start-50"
                 style={{
-                  zIndex: "1",
-                  fontSize: "1.2em"
+                  zIndex: "11",
+                  fontSize: "1.2em",
+                  transform: "translate(-100%, -40%)"
                 }}
               >
                 {timer}
@@ -849,7 +850,6 @@ function Game() {
                   boom ? "boom" : "bombEntrance",
                   "position-relative"
                 )}
-                style={{ right: "-0.3em", bottom: "0.2em" }}
               >
                 <Bombsvg
                   className={clsx(
