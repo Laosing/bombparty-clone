@@ -92,3 +92,40 @@ body,
     opacity: 0;
   }
 }
+
+.dark {
+  background: var(--bs-gray-800);
+  color: white;
+  .sidebar {
+    background: var(--bs-gray-900);
+  }
+  .hr {
+    background: #111;
+  }
+  .list-group-item,
+  .btn-dark,
+  .form-control {
+    background: #111;
+    border-color: black;
+    color: white;
+    opacity: 1;
+  }
+  .list-group-item-primary {
+    color: #084298;
+    background-color: #cfe2ff;
+  }
+  .btn-outline-dark {
+    color: var(--bs-gray-500);
+    background-color: var(--bs-gray-700);
+    border-color: black;
+  }
+}
+
+.sidebar {
+  background: var(--bs-gray-200);
+}
+
+.hr {
+  opacity: 1;
+  background: var(--bs-gray-500);
+}

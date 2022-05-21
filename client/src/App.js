@@ -91,10 +91,13 @@ const useSoundStore = create(
 
 const useGameStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       name: getRandomName(),
       setName: (name) => set({ name }),
-      userId: nanoid()
+      userId: nanoid(),
+      theme: "light",
+      switchTheme: () =>
+        set({ theme: get().theme === "light" ? "dark" : "light" })
     }),
     { name: "game-settings" }
   )
@@ -259,8 +262,13 @@ const Home = () => {
 const Rules = ({ className }) => {
   const { setIsAdmin } = useSocket()
   const toggleAdmin = () => setIsAdmin((p) => !p)
+  const theme = useGameStore((store) => store.theme)
   return (
-    <Alert style={{ maxWidth: "30em" }} className={clsx("mx-auto", className)}>
+    <Alert
+      style={{ maxWidth: "30em" }}
+      className={clsx("mx-auto", className)}
+      variant={theme === "light" ? "primary" : "warning"}
+    >
       <h5>Rules 🧐</h5>
       <p className="small">
         On a player's turn they must type a word (3 characters or more)
@@ -411,22 +419,22 @@ function InitializeRoom() {
 
 function Room() {
   const { roomId } = useRoom()
+  const theme = useGameStore((state) => state.theme)
 
   return (
     <>
       {/* <Header /> */}
-      <Container fluid className="d-flex flex-grow-1">
+      <Container
+        fluid
+        className={clsx("d-flex flex-grow-1 overflow-hidden", theme)}
+      >
         <Row className="flex-grow-1">
           <Col md={8}>
             <Layout>
               <Game />
             </Layout>
           </Col>
-          <Col
-            md={4}
-            className="p-0 d-flex flex-column"
-            style={{ background: "var(--bs-gray-200)" }}
-          >
+          <Col md={4} className={clsx("p-0 d-flex flex-column sidebar")}>
             <div className="p-3 pb-0 text-center">
               <AvatarSettings />
               <HeaderUser />
@@ -454,9 +462,7 @@ function Room() {
   )
 }
 
-const Hr = () => (
-  <hr className="m-0" style={{ backgroundColor: "var(--bs-gray-600)" }} />
-)
+const Hr = () => <hr className={clsx("hr m-0")} />
 
 function AudioSettings() {
   const [
@@ -478,24 +484,39 @@ function AudioSettings() {
     shallow
   )
 
+  const theme = useGameStore((store) => store.theme)
+  const switchTheme = useGameStore((store) => store.switchTheme)
+
   useEffect(() => {
     Howler.volume(volume)
   }, [volume])
 
   return (
     <Form className="p-3">
-      <Form.Check
-        type="switch"
-        checked={!!music}
-        onChange={toggleMusic}
-        label="Music"
-      />
-      <Form.Check
-        type="switch"
-        checked={!!soundEffects}
-        onChange={toggleSoundEffects}
-        label="Sound effects"
-      />
+      <Row>
+        <Col>
+          <Form.Check
+            type="switch"
+            checked={!!music}
+            onChange={toggleMusic}
+            label="Music"
+          />
+          <Form.Check
+            type="switch"
+            checked={!!soundEffects}
+            onChange={toggleSoundEffects}
+            label="Sound effects"
+          />
+        </Col>
+        <Col>
+          <Form.Check
+            type="switch"
+            checked={theme === "dark"}
+            onChange={switchTheme}
+            label="Dark Mode"
+          />
+        </Col>
+      </Row>
       <Form.Label className="mt-2 mb-0">Volume</Form.Label>
       <Form.Range
         defaultValue={volume}
@@ -544,7 +565,7 @@ function HeartLetters() {
           as={"span"}
           size="sm"
           key={letter}
-          variant={userLetters.includes(letter) ? "dark" : "outline-secondary"}
+          variant={userLetters.includes(letter) ? "dark" : "outline-dark"}
           className={`disabled me-1 mb-1`}
           style={{ width: "31px" }}
         >
