@@ -424,10 +424,7 @@ function Room() {
   return (
     <>
       {/* <Header /> */}
-      <Container
-        fluid
-        className={clsx("d-flex flex-grow-1 overflow-hidden", theme)}
-      >
+      <Container fluid className={clsx("d-flex flex-grow-1", theme)}>
         <Row className="flex-grow-1">
           <Col md={8}>
             <Layout>
