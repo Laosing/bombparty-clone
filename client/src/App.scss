@@ -53,13 +53,13 @@ body,
 @keyframes letterblendFade {
   0% {
     opacity: 0;
-    transform: translateY(0);
+    transform: translateY(-0em);
   }
-  20% {
+  7% {
     opacity: 1;
     transform: translateY(-1em);
   }
-  80% {
+  93% {
     opacity: 1;
     transform: translateY(-1em);
   }
@@ -107,6 +107,9 @@ body,
     border-color: black;
     color: white;
     opacity: 1;
+    &:disabled {
+      opacity: 0.4;
+    }
   }
   .list-group-item-primary {
     color: #084298;

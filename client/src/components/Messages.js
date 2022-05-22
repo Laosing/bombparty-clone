@@ -24,7 +24,7 @@ function Messages() {
 
   return (
     <>
-      <div className="overflow-auto" style={{ flex: "1 1 10em" }}>
+      <div className="overflow-auto" style={{ flex: "1 1 7em" }}>
         <ListGroup className="mt-auto">
           {[...messages]
             .sort((a, b) => a.time - b.time)

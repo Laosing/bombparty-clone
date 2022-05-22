@@ -103,15 +103,18 @@ const useGameStore = create(
   )
 )
 
-const Highlight = (props) => (
-  <Highlighter
-    highlightTag="strong"
-    unhighlightClassName="fw-bold"
-    highlightClassName="text-danger"
-    autoEscape={true}
-    {...props}
-  />
-)
+const Highlight = (props) => {
+  const theme = useGameStore((store) => store.theme)
+  return (
+    <Highlighter
+      highlightTag="strong"
+      unhighlightClassName="fw-bold"
+      highlightClassName={theme === "light" ? "text-danger" : "text-warning"}
+      autoEscape={true}
+      {...props}
+    />
+  )
+}
 
 function Header({ children }) {
   return (
@@ -832,15 +835,17 @@ function Game() {
             <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
             <PlayerInput />
             <div
-              className="h3 position-relative m-auto"
+              className="h3 position-relative m-auto d-flex justify-content-center align-items-center"
               style={{ maxWidth: "80px", height: "80px" }}
             >
               <div
-                className="position-absolute text-white position-absolute top-50 start-50"
+                className="position-absolute text-white"
                 style={{
                   zIndex: "11",
                   fontSize: "1.2em",
-                  transform: "translate(-100%, -40%)"
+                  transform: `translate(${
+                    String(timer).length > 1 ? "-20%" : "-40%"
+                  }, 20%)`
                 }}
               >
                 {timer}
@@ -853,7 +858,7 @@ function Game() {
               >
                 <Bombsvg
                   className={clsx(
-                    "animate__animated animate__infinite animate__pulse"
+                    "animate__animated animate__infinite animate__pulse w-100"
                   )}
                   style={{
                     fill: hardMode ? "var(--bs-danger)" : "initial"
@@ -935,6 +940,7 @@ function Winner({ winner }) {
     if (node) {
       var rect = node.getBoundingClientRect()
       confetti({
+        disableForReducedMotion: true,
         origin: {
           x: (rect.left + rect.width / 2) / window.innerWidth,
           y: (rect.top + rect.height / 2) / window.innerHeight
@@ -1061,6 +1067,14 @@ function PlayerInput() {
           disabled={!isCurrentPlayer}
           {...(!isCurrentPlayer && { value: deferredValue })}
         />
+        {deferredValue && (
+          <Badge
+            bg={deferredValue.length > 10 ? "warning text-dark" : "secondary"}
+            className="position-absolute top-50 end-0 translate-middle-y me-2"
+          >
+            {deferredValue.length}
+          </Badge>
+        )}
         {errorReason && (
           <Badge
             bg="danger"
@@ -1106,6 +1120,8 @@ function Players() {
   const players = room.get("users")
   const running = room.get("running")
   const currentPlayer = room.get("currentPlayer")
+
+  const theme = useGameStore((store) => store.theme)
 
   const [validControls] = useHowl(soundValid)
   const [invalidControls] = useHowl(soundInvalid)
@@ -1232,12 +1248,26 @@ function Players() {
                   </span>
                 )}
                 {running && id !== currentPlayer && (
-                  <span className="ms-auto small">
-                    <Highlight
-                      searchWords={[value.letterBlend]}
-                      textToHighlight={value.text}
-                    />
-                  </span>
+                  <>
+                    <span className="ms-auto small">
+                      <Highlight
+                        searchWords={[value.letterBlend]}
+                        textToHighlight={value.text}
+                      />
+                    </span>
+                    {Boolean(value.text.length) && (
+                      <Badge
+                        bg={
+                          value.text.length > 10
+                            ? "warning text-dark"
+                            : "secondary"
+                        }
+                        style={{ fontSize: ".5em" }}
+                      >
+                        {value.text.length}
+                      </Badge>
+                    )}
+                  </>
                 )}
               </Stack>
             ))}
