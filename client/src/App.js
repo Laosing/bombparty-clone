@@ -48,7 +48,8 @@ import soundValid from "audio/valid.mp3"
 import soundInvalid from "audio/error.mp3"
 import soundJoining from "audio/joining.mp3"
 import soundLeaving from "audio/leaving.mp3"
-import soundGainedHeart from "audio/gained-heart.mp3"
+import soundGainedHeart from "audio/gained-heart.wav"
+import soundGainedBonusLetter from "audio/bonus-letter.mp3"
 import soundWinner from "audio/winner.mp3"
 
 import { ReactComponent as Bombsvg } from "images/bomb.svg"
@@ -66,6 +67,7 @@ import Highlighter from "react-highlight-words"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
+const LETTER_BONUS = 10
 const getRoomId = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 4)
 
 const getRandomName = () =>
@@ -284,6 +286,8 @@ const Rules = ({ className }) => {
       </p>
       <p className="small mb-0">
         The alphabet is at the top, use all the letters to gain a heart ❤️.
+        Bonus for long words: if the word is 11 letters or longer the player
+        gets a free random letter 🤓.
       </p>
     </Alert>
   )
@@ -534,8 +538,10 @@ function HeartLetters() {
   const { room } = useRoom()
 
   const running = room.get("running")
-  const userLetters = [...room.get("users").get(userId).letters]
-  const letters = "abcdefghijklmnopqrstuvwxyz"
+  const user = room.get("users").get(userId)
+  const userLetters = [...user.letters]
+  const userBonusLetters = [...user.bonusLetters]
+  const alphabet = "abcdefghijklmnopqrstuvwxyz"
 
   if (!running) {
     return null
@@ -560,12 +566,18 @@ function HeartLetters() {
 
   return (
     <div style={{ maxWidth: "477px" }} className="m-auto">
-      {[...letters].map((letter) => (
+      {[...alphabet].map((letter) => (
         <Button
           as={"span"}
           size="sm"
           key={letter}
-          variant={userLetters.includes(letter) ? "dark" : "outline-dark"}
+          variant={
+            userBonusLetters.includes(letter)
+              ? "warning"
+              : userLetters.includes(letter)
+              ? "dark"
+              : "outline-dark"
+          }
           className={`disabled me-1 mb-1`}
           style={{ width: "31px" }}
         >
@@ -1069,7 +1081,11 @@ function PlayerInput() {
         />
         {deferredValue && (
           <Badge
-            bg={deferredValue.length > 10 ? "warning text-dark" : "secondary"}
+            bg={
+              deferredValue.length > LETTER_BONUS
+                ? "warning text-dark"
+                : "secondary"
+            }
             className="position-absolute top-50 end-0 translate-middle-y me-2"
           >
             {deferredValue.length}
@@ -1121,8 +1137,6 @@ function Players() {
   const running = room.get("running")
   const currentPlayer = room.get("currentPlayer")
 
-  const theme = useGameStore((store) => store.theme)
-
   const [validControls] = useHowl(soundValid)
   const [invalidControls] = useHowl(soundInvalid)
   const [boomControls] = useHowl(soundBoom)
@@ -1130,6 +1144,7 @@ function Players() {
   const [userJoinedControls] = useHowl(soundJoining)
   const [userLeftControls] = useHowl(soundLeaving)
   const [gainedHeartControls] = useHowl(soundGainedHeart)
+  const [gainedBonusLetter] = useHowl(soundGainedBonusLetter)
 
   const validation = useWordValidation(500, (isValid) => {
     if (isValid) {
@@ -1140,18 +1155,21 @@ function Players() {
   })
 
   useEffect(() => {
+    const triggerGainedBonusLetter = () => gainedBonusLetter.play()
     const triggerGainedHeart = () => gainedHeartControls.play()
     const triggerBoom = () => boomControls.play()
     const triggerUserJoined = () => userJoinedControls.play()
     const userLeft = () => userLeftControls.play()
     const triggerWinner = () => winnerControls.play()
 
+    socket.on("bonusLetter", triggerGainedBonusLetter)
     socket.on("gainedHeart", triggerGainedHeart)
     socket.on("userJoined", triggerUserJoined)
     socket.on("userLeft", userLeft)
     socket.on("winner", triggerWinner)
     socket.on("boom", triggerBoom)
     return () => {
+      socket.off("bonusLetter", triggerGainedBonusLetter)
       socket.off("gainedHeart", triggerGainedHeart)
       socket.off("userJoined", triggerUserJoined)
       socket.off("userLeft", userLeft)
@@ -1258,7 +1276,7 @@ function Players() {
                     {Boolean(value.text.length) && (
                       <Badge
                         bg={
-                          value.text.length > 10
+                          value.text.length > LETTER_BONUS
                             ? "warning text-dark"
                             : "secondary"
                         }

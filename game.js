@@ -10,6 +10,14 @@ const dictionary = JSON.parse(readFileSync("./data/wordlist.json"))
 
 const getRandomLetters = getRandomLettersFn(Object.keys(dictionary))
 
+const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)]
+
+const getRandomInt = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min
+
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+const LETTER_BONUS = 10
+
 const rooms = new Map()
 
 function connection(io, socket) {
@@ -93,20 +101,42 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function setUserLetters(userId, value) {
+  function setHeartLetters(userId, value) {
     const { users } = getRoom()
     const user = users.get(userId)
+
     const letters = new Set([...user.letters, ...value.split("")])
-    if (letters.size >= 26) {
+    const bonusletter = getBonusLetters(value, letters)
+    const newLetters = new Set([...letters, bonusletter])
+
+    if (newLetters.size >= 26) {
       users.set(userId, {
         ...user,
-        lives: Number(user.lives) + 1,
-        letters: new Set()
+        lives: Number(user.lives) >= 10 ? 10 : Number(user.lives) + 1,
+        letters: new Set(),
+        bonusLetters: new Set()
       })
       io.sockets.in(roomId).emit("gainedHeart", userId)
     } else {
-      users.set(userId, { ...user, letters })
+      users.set(userId, {
+        ...user,
+        letters: newLetters,
+        bonusLetters: new Set([...user.bonusLetters, ...bonusletter])
+      })
     }
+  }
+
+  function getBonusLetters(value, letters) {
+    if (value.length > LETTER_BONUS) {
+      const lettersArray = [...letters]
+      const remainingLetters = ALPHABET.split("").filter(
+        (l) => !lettersArray.includes(l)
+      )
+      const randomLetter = getRandomElement(remainingLetters)
+      io.sockets.in(roomId).emit("bonusLetter", true)
+      return randomLetter
+    }
+    return ""
   }
 
   function checkWord(value, userId) {
@@ -131,7 +161,7 @@ function connection(io, socket) {
         .emit("wordValidation", true, { value, letterBlend, currentPlayer })
       words.add(value)
       setPlayerText(userId, value)
-      setUserLetters(userId, value)
+      setHeartLetters(userId, value)
       resetletterBlendCounter()
       setLetterBlend()
       timerConstructor.reset()
@@ -173,10 +203,6 @@ function connection(io, socket) {
     const { users, letterBlend } = getRoom()
     const player = users.get(userId)
     users.set(userId, { ...player, text, letterBlend })
-  }
-
-  function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min
   }
 
   function resetTimer() {
@@ -308,7 +334,16 @@ function connection(io, socket) {
     const { room, users, settings } = getRoom()
     const lives = settings.get("lives")
     const updatedUsers = Array.from(users, ([key, value]) => {
-      return [key, { ...value, letters: new Set(), lives, text: "" }]
+      return [
+        key,
+        {
+          ...value,
+          letters: new Set(),
+          lives,
+          text: "",
+          bonusLetters: new Set()
+        }
+      ]
     })
     room.set("users", new Map(updatedUsers))
   }
@@ -374,7 +409,7 @@ function connection(io, socket) {
     const keys = Array.from(collection)
       .filter(([, val]) => val.inGame)
       .map(([id]) => id)
-    const randomPlayer = keys[Math.floor(Math.random() * keys.length)]
+    const randomPlayer = getRandomElement(keys)
     room.set("startingPlayer", randomPlayer)
     return randomPlayer
   }
@@ -418,7 +453,8 @@ function connection(io, socket) {
       letters: new Set(),
       avatar: nanoid(),
       inGame: false,
-      score: 0
+      score: 0,
+      bonusLetters: new Set()
     })
   }
 
