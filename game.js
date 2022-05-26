@@ -383,7 +383,7 @@ function connection(io, socket) {
   function checkIncrementRound(players) {
     const { currentPlayer, startingPlayer, room } = getRoom()
 
-    if (!players.find(([id]) => id === startingPlayer)) {
+    if (!players.find(([id, val]) => id === startingPlayer && val?.lives > 0)) {
       room.set("startingPlayer", currentPlayer)
     }
     if (currentPlayer === startingPlayer) {
@@ -445,7 +445,7 @@ function connection(io, socket) {
   }
 
   function getRoom(isPrivate) {
-    const room = rooms.get(_roomId)
+    const room = rooms.get(_roomId) || rooms.set("null_room", new Map())
     const setProp = (prop, initialValue) =>
       room.get(prop) || room.set(prop, initialValue).get(prop)
 
