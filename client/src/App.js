@@ -308,6 +308,9 @@ const Rooms = () => {
             </Badge>
           </Button>
         ))}
+        {rooms.size === 0 && (
+          <small className="text-muted">No active rooms</small>
+        )}
       </div>
     </>
   )

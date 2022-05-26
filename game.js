@@ -412,9 +412,7 @@ function connection(io, socket) {
     }
 
     if (!nextPlayerId) {
-      const remainingPlayers = players.filter(
-        ([, val]) => val.lives > 0 && val.inGame
-      )
+      const remainingPlayers = players.filter(([, val]) => val.lives > 0)
       nextPlayerId = remainingPlayers[0][0]
     }
 
@@ -529,6 +527,10 @@ function connection(io, socket) {
       stopGame()
     }
     relayRoom()
+    if (users.size === 0 && _roomId) {
+      log.red(`Deleting room: ${_roomId}`)
+      rooms.delete(_roomId)
+    }
   }
 }
 
