@@ -99,7 +99,9 @@ const useGameStore = create(
       userId: nanoid(),
       theme: "light",
       switchTheme: () =>
-        set({ theme: get().theme === "light" ? "dark" : "light" })
+        set({ theme: get().theme === "light" ? "dark" : "light" }),
+      isAdmin: false,
+      setIsAdmin: () => set({ isAdmin: !get().isAdmin })
     }),
     { name: "game-settings" }
   )
@@ -197,7 +199,11 @@ function AvatarSettings() {
 }
 
 function App() {
-  return <Outlet />
+  return (
+    <InitializeSocket>
+      <Outlet />
+    </InitializeSocket>
+  )
 }
 
 const Router = () => {
@@ -260,12 +266,52 @@ const Home = () => {
           </Button>
         </InputGroup>
       </Form>
+      <Rooms />
     </LayoutWithHeader>
   )
 }
 
+const Rooms = () => {
+  const { socket } = useSocket()
+  const [rooms, setRooms] = useState([])
+
+  useEffect(() => {
+    const getRooms = (val) => setRooms(new Map(deserialize(val)))
+
+    socket.emit("leaveRoom")
+    socket.emit("getRooms")
+    socket.on("getRooms", getRooms)
+    return () => {
+      socket.off("getRooms", getRooms)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <>
+      <h2>Rooms</h2>
+      <div className="d-flex align-content-start flex-wrap justify-content-center gap-3">
+        {[...rooms].map(([room, players]) => (
+          <Button
+            key={room}
+            as={Link}
+            to={room}
+            variant="secondary"
+            className="d-inline-flex align-items-center fw-bold"
+          >
+            {room}
+            <Badge bg="dark" className="ms-2" style={{ fontSize: "0.7em" }}>
+              {players.size}
+            </Badge>
+          </Button>
+        ))}
+      </div>
+    </>
+  )
+}
+
 const Rules = ({ className }) => {
-  const { setIsAdmin } = useSocket()
+  const setIsAdmin = useGameStore((state) => state.setIsAdmin)
   const toggleAdmin = () => setIsAdmin((p) => !p)
   const theme = useGameStore((store) => store.theme)
   return (
@@ -308,22 +354,19 @@ function ValidateRoom() {
     )
   }
 
-  return <InitializeSocket />
+  return <InitializeRoom />
 }
 
 const SocketContext = React.createContext()
 export const useSocket = () => useContext(SocketContext)
 
-const InitializeSocket = () => {
-  const { roomId } = useParams()
+const InitializeSocket = ({ children }) => {
   const [socket, setSocket] = useState(undefined)
-  const [isAdmin, setIsAdmin] = useState()
   const name = useGameStore((state) => state.name)
   const userId = useGameStore((state) => state.userId)
-  const hasSocket = socket?.id
 
   useEffect(() => {
-    if (!hasSocket) {
+    if (!socket) {
       const logger = (event, ...args) => {
         console.log(
           "%c" + event,
@@ -332,7 +375,7 @@ const InitializeSocket = () => {
         )
       }
 
-      const params = { auth: { name, userId }, query: { roomId } }
+      const params = { auth: { name, userId } }
       const props = isDevEnv
         ? [`http://${window.location.hostname}:8080`, params]
         : [params]
@@ -360,8 +403,8 @@ const InitializeSocket = () => {
   }
 
   return (
-    <SocketContext.Provider value={{ socket, userId, isAdmin, setIsAdmin }}>
-      <InitializeRoom />
+    <SocketContext.Provider value={{ socket, userId }}>
+      {children}
     </SocketContext.Provider>
   )
 }
@@ -377,7 +420,7 @@ function InitializeRoom() {
   useEffect(() => {
     const getRoom = (val) => setRoom(deserialize(val))
 
-    socket.emit("getRoom")
+    socket.emit("joinRoom", roomId)
     socket.on("getRoom", getRoom)
     return () => {
       socket.off("getRoom", getRoom)
@@ -1131,11 +1174,13 @@ const useHowl = (src, type = "effect", props) => {
 }
 
 function Players() {
-  const { socket, isAdmin } = useSocket()
+  const { socket } = useSocket()
   const { room } = useRoom()
   const players = room.get("users")
   const running = room.get("running")
   const currentPlayer = room.get("currentPlayer")
+
+  const isAdmin = useGameStore((state) => state.isAdmin)
 
   const [validControls] = useHowl(soundValid)
   const [invalidControls] = useHowl(soundInvalid)

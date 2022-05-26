@@ -21,16 +21,12 @@ const LETTER_BONUS = 10
 const rooms = new Map()
 
 function connection(io, socket) {
-  const { roomId } = socket.handshake.query
-
   let _firstRound = true
+  let _roomId
 
-  getRoom()
-  initializeUser()
-  setSettings()
-
-  socket.join(roomId)
-
+  socket.on("leaveRoom", () => leaveRoom())
+  socket.on("joinRoom", (roomId) => joinRoom(roomId))
+  socket.on("getRooms", () => getRooms())
   socket.on("joinGame", (userId) => joinGame(userId))
   socket.on("leaveGame", (userId) => leaveGame(userId))
   socket.on("kickPlayer", (userId) => leaveGame(userId))
@@ -49,11 +45,39 @@ function connection(io, socket) {
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
+  function joinRoom(roomId) {
+    _roomId = roomId
+
+    getRoom()
+    initializeUser()
+    setSettings()
+
+    socket.join(_roomId)
+    getRooms()
+    relayRoom()
+  }
+
+  function leaveRoom() {
+    if (_roomId) {
+      socket.leave(_roomId)
+    }
+  }
+
+  function getRooms() {
+    const clients = Array.from(io.sockets.adapter.sids.keys())
+    const rooms = Array.from(io.sockets.adapter.rooms).filter(
+      ([id]) => !clients.includes(id)
+    )
+
+    // console.dir(io.sockets.adapter.rooms)
+    io.emit("getRooms", serialize(rooms))
+  }
+
   function joinGame(userId) {
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: true, score: 0 })
-    io.sockets.in(roomId).emit("userJoined", userId)
+    io.sockets.in(_roomId).emit("userJoined", userId)
     relayRoom()
   }
 
@@ -73,12 +97,12 @@ function connection(io, socket) {
   }
 
   function relayRoom() {
-    const { roomId, room } = getRoom()
-    io.sockets.in(roomId).emit("getRoom", serialize(room))
+    const { room } = getRoom()
+    io.sockets.in(_roomId).emit("getRoom", serialize(room))
   }
 
   function setGlobalInputText(text = "") {
-    io.sockets.in(roomId).emit("setGlobalInputText", text)
+    io.sockets.in(_roomId).emit("setGlobalInputText", text)
   }
 
   function updateName(value, userId) {
@@ -116,7 +140,7 @@ function connection(io, socket) {
         letters: new Set(),
         bonusLetters: new Set()
       })
-      io.sockets.in(roomId).emit("gainedHeart", userId)
+      io.sockets.in(_roomId).emit("gainedHeart", userId)
     } else {
       users.set(userId, {
         ...user,
@@ -133,15 +157,14 @@ function connection(io, socket) {
         (l) => !lettersArray.includes(l)
       )
       const randomLetter = getRandomElement(remainingLetters)
-      io.sockets.in(roomId).emit("bonusLetter", true)
+      io.sockets.in(_roomId).emit("bonusLetter", true)
       return randomLetter
     }
     return ""
   }
 
   function checkWord(value, userId) {
-    const { roomId, letterBlend, words, currentPlayer, timerConstructor } =
-      getRoom()
+    const { letterBlend, words, currentPlayer, timerConstructor } = getRoom()
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = !!dictionary[value]
     const isUnique = !words.has(value)
@@ -157,7 +180,7 @@ function connection(io, socket) {
     ) {
       log.green(`valid word: ${value}`)
       io.sockets
-        .in(roomId)
+        .in(_roomId)
         .emit("wordValidation", true, { value, letterBlend, currentPlayer })
       words.add(value)
       setPlayerText(userId, value)
@@ -168,7 +191,7 @@ function connection(io, socket) {
       switchPlayer()
     } else {
       log.green(`invalid word: ${value}`)
-      io.sockets.in(roomId).emit("wordValidation", false, {
+      io.sockets.in(_roomId).emit("wordValidation", false, {
         isBlend,
         isDictionary,
         isUnique,
@@ -245,7 +268,7 @@ function connection(io, socket) {
     } = getRoom()
     const wordDetails =
       letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : ["", ""]
-    io.sockets.in(roomId).emit("boom", [currentPlayer, ...wordDetails])
+    io.sockets.in(_roomId).emit("boom", [currentPlayer, ...wordDetails])
     loseLife()
     const hasWinner = checkGameState()
     if (!hasWinner) {
@@ -309,7 +332,7 @@ function connection(io, socket) {
     const singlePlayer = players.length === 1 ? players[0][1].lives <= 1 : false
     const hasWinner = players.length === 1 ? singlePlayer : lastPlayer
     if (hasWinner) {
-      io.sockets.in(roomId).emit("winner", true)
+      io.sockets.in(_roomId).emit("winner", true)
       const [userId, winner] = remainingPlayers[0] || players[0]
       users.set(userId, { ...winner, score: winner.score + 1 })
       stopGame(winner)
@@ -415,8 +438,7 @@ function connection(io, socket) {
   }
 
   function getRoom() {
-    const { roomId } = socket.handshake.query
-    const room = rooms.get(roomId) || rooms.set(roomId, new Map())
+    const room = rooms.get(_roomId) || rooms.set(_roomId, new Map())
     const setProp = (prop, initialValue) =>
       room.get(prop) || room.set(prop, initialValue).get(prop)
 
@@ -441,7 +463,7 @@ function connection(io, socket) {
       settings: setProp("settings", new Map())
     }
 
-    return { room, roomId, ...props }
+    return { room, ...props }
   }
 
   function initializeUser() {
@@ -472,7 +494,7 @@ function connection(io, socket) {
       .set("hardMode", hardMode)
       .set("letterBlendCounter", letterBlendCounter)
     if (data) {
-      io.sockets.in(roomId).emit("setSettings", serialize(settings))
+      io.sockets.in(_roomId).emit("setSettings", serialize(settings))
       relayRoom()
     }
   }
@@ -509,7 +531,8 @@ function connection(io, socket) {
     }
     // socket.leave(roomId)
     // socket.disconnect(true)
-    io.sockets.in(roomId).emit("userLeft", userId)
+    io.sockets.in(_roomId).emit("userLeft", userId)
+    leaveRoom()
     relayRoom()
   }
 }
