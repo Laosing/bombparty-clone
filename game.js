@@ -25,7 +25,7 @@ function connection(io, socket) {
   let _roomId
 
   socket.on("leaveRoom", () => disconnect())
-  socket.on("joinRoom", (roomId) => joinRoom(roomId))
+  socket.on("joinRoom", (roomId, isPrivate) => joinRoom(roomId, isPrivate))
   socket.on("getRooms", () => getRooms())
   socket.on("joinGame", (userId) => joinGame(userId))
   socket.on("leaveGame", (userId) => leaveGame(userId))
@@ -45,10 +45,11 @@ function connection(io, socket) {
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
-  function joinRoom(roomId) {
+  function joinRoom(roomId, isPrivate) {
     _roomId = roomId
 
-    getRoom()
+    initializeRoom()
+    getRoom(isPrivate)
     initializeUser()
     setSettings()
 
@@ -57,14 +58,27 @@ function connection(io, socket) {
     relayRoom()
   }
 
+  function initializeRoom() {
+    const room = rooms.get(_roomId)
+    if (!room) {
+      rooms.set(_roomId, new Map())
+    }
+  }
+
   function getRooms() {
     const clients = Array.from(io.sockets.adapter.sids.keys())
-    const rooms = Array.from(io.sockets.adapter.rooms).filter(
+    const gameRooms = Array.from(io.sockets.adapter.rooms).filter(
       ([id]) => !clients.includes(id)
     )
-
+    const roomsWithPrivate = gameRooms.map(([room, players]) => [
+      room,
+      {
+        players,
+        isPrivate: Boolean(rooms.get(room).get("private"))
+      }
+    ])
     // console.dir(io.sockets.adapter.rooms)
-    io.emit("getRooms", serialize(rooms))
+    io.emit("getRooms", serialize(roomsWithPrivate))
   }
 
   function joinGame(userId) {
@@ -429,8 +443,8 @@ function connection(io, socket) {
     return randomPlayer
   }
 
-  function getRoom() {
-    const room = rooms.get(_roomId) || rooms.set(_roomId, new Map())
+  function getRoom(isPrivate) {
+    const room = rooms.get(_roomId)
     const setProp = (prop, initialValue) =>
       room.get(prop) || room.set(prop, initialValue).get(prop)
 
@@ -452,7 +466,8 @@ function connection(io, socket) {
       startingPlayer: setProp("startingPlayer", ""),
       running: setProp("running", false),
       winner: setProp("winner", null),
-      settings: setProp("settings", new Map())
+      settings: setProp("settings", new Map()),
+      private: setProp("private", Boolean(isPrivate))
     }
 
     return { room, ...props }
@@ -516,6 +531,7 @@ function connection(io, socket) {
   }
 
   function disconnect(reason) {
+    if (!_roomId) return
     if (reason) console.log({ reason })
 
     const { userId } = socket.handshake.auth

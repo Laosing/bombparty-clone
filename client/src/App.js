@@ -10,6 +10,7 @@ import {
   Outlet,
   Route,
   Routes,
+  useLocation,
   useNavigate,
   useParams
 } from "react-router-dom"
@@ -248,13 +249,29 @@ const Home = () => {
     navigate(room)
   }
 
+  const [isPrivate, setIsPrivate] = useState(false)
+  const toggle = () => setIsPrivate((p) => !p)
+
   return (
-    <LayoutWithHeader>
+    <LayoutWithHeader className="pb-5">
       <h1 className="display-3">Welcome to 💣party!</h1>
       <p className="mb-5">Create or join a room to get started</p>
-      <Button size="lg" as={Link} to={getRoomId()} className="mb-4">
+      <Button
+        size="lg"
+        as={Link}
+        to={getRoomId()}
+        className="mb-1"
+        state={{ isPrivate }}
+      >
         Create room
       </Button>
+      <Form.Check
+        id="private-room"
+        checked={isPrivate}
+        onChange={toggle}
+        label="Private room"
+        className="d-flex gap-2 justify-content-center mb-5"
+      />
       <Form onSubmit={onSubmit} className="mb-5">
         <Form.Label>Know an existing room? Enter it here!</Form.Label>
         <InputGroup className="w-auto justify-content-center">
@@ -290,11 +307,13 @@ const Rooms = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const gameRooms = [...rooms].filter(([, data]) => !data.isPrivate)
+
   return (
     <>
       <h2>Rooms</h2>
       <div className="d-flex align-content-start flex-wrap justify-content-center gap-3">
-        {[...rooms].map(([room, players]) => (
+        {gameRooms.map(([room, data]) => (
           <Button
             key={room}
             as={Link}
@@ -304,12 +323,12 @@ const Rooms = () => {
           >
             {room}
             <Badge bg="dark" className="ms-2" style={{ fontSize: "0.7em" }}>
-              {players.size}
+              {data.players.size}
             </Badge>
           </Button>
         ))}
-        {rooms.size === 0 && (
-          <small className="text-muted">No active rooms</small>
+        {gameRooms.length === 0 && (
+          <small className="text-muted">No active public rooms</small>
         )}
       </div>
     </>
@@ -423,10 +442,13 @@ function InitializeRoom() {
   const { roomId } = useParams()
   const [room, setRoom] = useState()
 
+  const location = useLocation()
+  const isPrivate = location.state?.isPrivate
+
   useEffect(() => {
     const getRoom = (val) => setRoom(deserialize(val))
 
-    socket.emit("joinRoom", roomId)
+    socket.emit("joinRoom", roomId, isPrivate)
     socket.on("getRoom", getRoom)
     return () => {
       socket.off("getRoom", getRoom)
@@ -483,7 +505,7 @@ function Room() {
       <Container fluid className={clsx("d-flex flex-grow-1", theme)}>
         <Row className="flex-grow-1">
           <Col md={8}>
-            <Layout>
+            <Layout className="p-0">
               <Game />
             </Layout>
           </Col>
@@ -627,7 +649,7 @@ function HeartLetters() {
               ? "dark"
               : "outline-dark"
           }
-          className={`disabled me-1 mb-1`}
+          className={`disabled me-1 mb-1 heart-letters-btn`}
           style={{ width: "31px" }}
         >
           {letter.toUpperCase()}
@@ -638,15 +660,22 @@ function HeartLetters() {
 }
 
 function GameSettings() {
-  const { socket } = useSocket()
+  const { socket, userId } = useSocket()
   const { room } = useRoom()
 
+  const users = room.get("users")
   const running = room.get("running")
   const settings = room.get("settings")
   const lives = settings.get("lives")
   const timer = settings.get("timer")
   const letterBlendCounter = settings.get("letterBlendCounter")
   const hardMode = settings.get("hardMode")
+
+  const canEditSettings = !Boolean(
+    [...users].find(([id, val]) => val.inGame && id === userId)
+  )
+
+  const disabled = running || canEditSettings
 
   const submitForm = (e) => {
     e.preventDefault()
@@ -705,7 +734,7 @@ function GameSettings() {
                 min="1"
                 max="59"
                 step="1"
-                disabled={running}
+                disabled={disabled}
                 onChange={(e) => setTimerValue(e.target.value)}
               />
             </Form.Group>
@@ -721,7 +750,7 @@ function GameSettings() {
                 min="1"
                 max="10"
                 step="1"
-                disabled={running}
+                disabled={disabled}
                 onChange={(e) => setLivesValue(e.target.value)}
               />
             </Form.Group>
@@ -737,7 +766,7 @@ function GameSettings() {
                 min="1"
                 max="10"
                 step="1"
-                disabled={running}
+                disabled={disabled}
                 onChange={(e) => setLettersValue(e.target.value)}
               />
             </Form.Group>
@@ -754,7 +783,7 @@ function GameSettings() {
                 min="1"
                 max="10"
                 step="1"
-                disabled={running}
+                disabled={disabled}
                 onChange={(e) => setHardModeValue(e.target.value)}
               />
             </Form.Group>
@@ -763,7 +792,7 @@ function GameSettings() {
                 type="submit"
                 variant={notification ? "success" : "secondary"}
                 className="w-100"
-                disabled={running}
+                disabled={disabled}
                 size="sm"
               >
                 {notification ? "Updated!" : "Change settings"}
@@ -1276,7 +1305,10 @@ function Players() {
   return (
     <div>
       {!running && <h5>Players</h5>}
-      <div style={{ maxWidth: "30em" }} className="m-auto position-relative">
+      <div
+        style={{ maxWidth: "30em" }}
+        className="m-auto position-relative px-4"
+      >
         <Rounds />
         <ListGroup>
           {Array.from(players)
@@ -1334,7 +1366,9 @@ function Players() {
                 >
                   {id === currentPlayer && (
                     <span className="position-absolute top-50 start-100 translate-middle">
-                      💣
+                      <span className="animate__animated animate__infinite animate__pulse d-block">
+                        💣
+                      </span>
                     </span>
                   )}
                   {value.name}

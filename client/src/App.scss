@@ -133,3 +133,11 @@ body,
   opacity: 1;
   background: var(--bs-gray-500);
 }
+
+.heart-letters-btn {
+  @media (max-width: 500px) {
+    font-size: 0.7em;
+    width: auto !important;
+    font-weight: bold;
+  }
+}
