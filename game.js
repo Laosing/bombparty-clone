@@ -24,7 +24,7 @@ function connection(io, socket) {
   let _firstRound = true
   let _roomId
 
-  socket.on("leaveRoom", () => leaveRoom())
+  socket.on("leaveRoom", () => disconnect())
   socket.on("joinRoom", (roomId) => joinRoom(roomId))
   socket.on("getRooms", () => getRooms())
   socket.on("joinGame", (userId) => joinGame(userId))
@@ -55,12 +55,6 @@ function connection(io, socket) {
     socket.join(_roomId)
     getRooms()
     relayRoom()
-  }
-
-  function leaveRoom() {
-    if (_roomId) {
-      socket.leave(_roomId)
-    }
   }
 
   function getRooms() {
@@ -514,25 +508,26 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function removeUserFromGame(userId) {
+  function removeUserFromRoom(userId) {
     const { users } = getRoom()
     users.delete(userId)
+    if (_roomId) {
+      io.sockets.in(_roomId).emit("userLeft")
+      socket.leave(_roomId)
+    }
   }
 
   function disconnect(reason) {
-    console.log({ reason })
+    if (reason) console.log({ reason })
+
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
     leaveGame(userId)
-    removeUserFromGame(userId)
+    removeUserFromRoom(userId)
     // Stop game if no users left
     if ([...users].filter(([, val]) => val.inGame) <= 0) {
       stopGame()
     }
-    // socket.leave(roomId)
-    // socket.disconnect(true)
-    io.sockets.in(_roomId).emit("userLeft", userId)
-    leaveRoom()
     relayRoom()
   }
 }

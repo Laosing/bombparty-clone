@@ -276,11 +276,12 @@ const Home = () => {
 const Rooms = () => {
   const { socket } = useSocket()
   const [rooms, setRooms] = useState([])
+  const userId = useGameStore((state) => state.userId)
 
   useEffect(() => {
     const getRooms = (val) => setRooms(new Map(deserialize(val)))
 
-    socket.emit("leaveRoom")
+    socket.emit("leaveRoom", userId)
     socket.emit("getRooms")
     socket.on("getRooms", getRooms)
     return () => {
@@ -928,7 +929,40 @@ function Game() {
         {!running && winner && <Winner winner={winner} />}
       </div>
       <Players />
+      <Lobby />
     </>
+  )
+}
+
+const Lobby = () => {
+  const { room } = useRoom()
+  const players = room.get("users")
+  const running = room.get("running")
+
+  const lobbyPlayers = [...players].filter(([, val]) => !val.inGame)
+
+  if (running || lobbyPlayers.length === 0) {
+    return null
+  }
+
+  const tooltip = (props, name) => (
+    <Tooltip id="avatar-tooltip" {...props}>
+      {name}
+    </Tooltip>
+  )
+
+  return (
+    <div style={{ maxWidth: "30em" }} className="mx-auto">
+      <hr />
+      <h5>Players not in game</h5>
+      {lobbyPlayers.map(([id, val]) => (
+        <OverlayTrigger key={id} overlay={(props) => tooltip(props, val.name)}>
+          <div style={{ width: "3em" }} className="d-inline-block">
+            <Avatar id={val.avatar} />
+          </div>
+        </OverlayTrigger>
+      ))}
+    </div>
   )
 }
 
