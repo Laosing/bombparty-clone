@@ -24,33 +24,33 @@ function connection(io, socket) {
   let _firstRound = true
   let _roomId
 
-  socket.on("leaveRoom", () => disconnect())
-  socket.on("joinRoom", (roomId, isPrivate) => joinRoom(roomId, isPrivate))
-  socket.on("getRooms", () => getRooms())
-  socket.on("joinGame", (userId) => joinGame(userId))
-  socket.on("leaveGame", (userId) => leaveGame(userId))
-  socket.on("kickPlayer", (userId) => leaveGame(userId))
-  socket.on("setSettings", (value) => setSettings(value))
-  socket.on("checkWord", (value, userId) => checkWord(value, userId))
-  socket.on("setGlobalInputText", (value) => setGlobalInputText(value))
-  socket.on("startGame", () => startGame())
-  socket.on("stopGame", () => stopGame())
-  socket.on("getRoom", () => relayRoom())
-  socket.on("updateName", (value, userId) => updateName(value, userId))
-  socket.on("updateAvatar", (userId) => updateAvatar(userId))
-  socket.on("message", (value) => handleMessage(value))
-  socket.on("disconnect", (reason) => disconnect(reason))
+  socket.on("leaveRoom", disconnect)
+  socket.on("joinRoom", joinRoom)
+  socket.on("getRooms", getRooms)
+  socket.on("joinGame", joinGame)
+  socket.on("leaveGame", leaveGame)
+  socket.on("kickPlayer", leaveGame)
+  socket.on("setSettings", setSettings)
+  socket.on("checkWord", checkWord)
+  socket.on("setGlobalInputText", setGlobalInputText)
+  socket.on("startGame", startGame)
+  socket.on("stopGame", stopGame)
+  socket.on("getRoom", relayRoom)
+  socket.on("updateName", updateName)
+  socket.on("updateAvatar", updateAvatar)
+  socket.on("message", handleMessage)
+  socket.on("disconnect", disconnect)
   socket.on("connect_error", (err) => {
     log.red(`connect_error due to ${err.message}`)
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
-  function joinRoom(roomId, isPrivate) {
+  function joinRoom(roomId, isPrivate, name) {
     _roomId = roomId
 
     initializeRoom()
     getRoom(isPrivate)
-    initializeUser()
+    initializeUser(name)
     setSettings()
 
     socket.join(_roomId)
@@ -253,6 +253,7 @@ function connection(io, socket) {
   function updateTimer() {
     const { room, timerConstructor, users, currentPlayer } = getRoom()
 
+    checkNoUsers()
     const leftGame = !Array.from(users).find(([id]) => id === currentPlayer)
     if (leftGame) {
       switchPlayer()
@@ -304,10 +305,10 @@ function connection(io, socket) {
   }
 
   function startGame() {
-    const { room, settings, timerConstructor, users } = getRoom()
+    const { room, settings, timerConstructor } = getRoom()
 
     // No players, don't start the game
-    if ([...users].filter(([, val]) => val.inGame).length <= 0) return
+    if (checkNoUsers()) return
 
     const startTimer = settings.get("timer")
     room
@@ -473,8 +474,8 @@ function connection(io, socket) {
     return { room, ...props }
   }
 
-  function initializeUser() {
-    const { name, userId } = socket.handshake.auth
+  function initializeUser(name) {
+    const { userId } = socket.handshake.auth
     const { users } = getRoom()
     users.set(userId, {
       id: userId,
@@ -539,13 +540,19 @@ function connection(io, socket) {
     leaveGame(userId)
     removeUserFromRoom(userId)
     // Stop game if no users left
-    if ([...users].filter(([, val]) => val.inGame) <= 0) {
-      stopGame()
-    }
+    checkNoUsers()
     relayRoom()
     if (users.size === 0 && _roomId) {
       log.red(`Deleting room: ${_roomId}`)
       rooms.delete(_roomId)
+    }
+  }
+
+  function checkNoUsers() {
+    const { users } = getRoom()
+    if ([...users].filter(([, val]) => val.inGame) <= 0) {
+      stopGame()
+      return true
     }
   }
 }

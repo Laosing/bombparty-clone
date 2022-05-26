@@ -387,7 +387,6 @@ export const useSocket = () => useContext(SocketContext)
 
 const InitializeSocket = ({ children }) => {
   const [socket, setSocket] = useState(undefined)
-  const name = useGameStore((state) => state.name)
   const userId = useGameStore((state) => state.userId)
 
   useEffect(() => {
@@ -400,7 +399,7 @@ const InitializeSocket = ({ children }) => {
         )
       }
 
-      const params = { auth: { name, userId } }
+      const params = { auth: { userId } }
       const props = isDevEnv
         ? [`http://${window.location.hostname}:8080`, params]
         : [params]
@@ -441,14 +440,14 @@ function InitializeRoom() {
   const { socket, userId } = useSocket()
   const { roomId } = useParams()
   const [room, setRoom] = useState()
-
+  const name = useGameStore((state) => state.name)
   const location = useLocation()
   const isPrivate = location.state?.isPrivate
 
   useEffect(() => {
     const getRoom = (val) => setRoom(deserialize(val))
 
-    socket.emit("joinRoom", roomId, isPrivate)
+    socket.emit("joinRoom", roomId, isPrivate, name)
     socket.on("getRoom", getRoom)
     return () => {
       socket.off("getRoom", getRoom)
