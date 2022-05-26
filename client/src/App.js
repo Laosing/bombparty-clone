@@ -67,6 +67,8 @@ import Highlighter from "react-highlight-words"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
+const log = isDevEnv ? console.log : () => {}
+
 const LETTER_BONUS = 10
 const getRoomId = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 4)
 
@@ -368,7 +370,7 @@ const InitializeSocket = ({ children }) => {
   useEffect(() => {
     if (!socket) {
       const logger = (event, ...args) => {
-        console.log(
+        log(
           "%c" + event,
           "color: pink;",
           event === "getRoom" ? deserialize(args) : args
@@ -382,11 +384,11 @@ const InitializeSocket = ({ children }) => {
 
       const newSocket = io(...props)
       setSocket(newSocket)
-      console.log("setting socket!", newSocket)
+      log("setting socket!", newSocket)
 
       newSocket.onAny(logger)
       return () => {
-        console.log("closing!")
+        log("closing!")
         newSocket.offAny(logger)
         newSocket.close()
       }
@@ -820,10 +822,10 @@ function Game() {
 
   const toggleGame = () => {
     if (running) {
-      console.log("STOP!")
+      log("STOP!")
       socket.emit("stopGame")
     } else {
-      console.log("START!")
+      log("START!")
       socket.emit("startGame")
     }
   }
