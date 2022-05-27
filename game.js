@@ -165,7 +165,7 @@ function connection(io, socket) {
         (l) => !lettersArray.includes(l)
       )
       const randomLetter = getRandomElement(remainingLetters)
-      io.sockets.in(_roomId).emit("bonusLetter", true)
+      io.sockets.in(_roomId).emit("bonusLetter", randomLetter)
       return randomLetter
     }
     return ""

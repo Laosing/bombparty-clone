@@ -850,7 +850,7 @@ function Game() {
     autoplay: true
   })
 
-  const [[boom, boomLetterBlend, boomWord], resetBoom] = useEventTimeout("boom")
+  const [[boom, boomLetterBlend, boomWord], resetBoom] = useBoomTimeout("boom")
 
   const toggleGame = () => {
     if (running) {
@@ -997,7 +997,27 @@ const Lobby = () => {
   )
 }
 
-const useEventTimeout = (event, timeout = 300) => {
+const useEventTimeout = (event, initialValue, timeout = 300) => {
+  const { socket } = useSocket()
+  const [state, setState] = useState(initialValue)
+
+  useEffect(() => {
+    const triggerEvent = (data) => {
+      setState(data)
+      setTimeout(() => setState(initialValue), timeout)
+    }
+
+    socket.on(event, triggerEvent)
+    return () => {
+      socket.off(event, triggerEvent)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return [state]
+}
+
+const useBoomTimeout = (event, timeout = 300) => {
   const { socket } = useSocket()
   const [state, setState] = useState([])
 
@@ -1131,6 +1151,8 @@ function PlayerInput() {
 
   const validation = useWordValidation(500)
 
+  const [bonusLetter] = useEventTimeout("bonusLetter", "", 1000)
+
   const currentPlayer = room.get("currentPlayer")
   const isCurrentPlayer = currentPlayer === userId
 
@@ -1199,6 +1221,19 @@ function PlayerInput() {
             className="position-absolute top-50 end-0 translate-middle-y me-2"
           >
             {deferredValue.length}
+          </Badge>
+        )}
+        {bonusLetter && (
+          <Badge
+            bg="warning text-dark"
+            className="position-absolute top-100 start-50"
+            style={{
+              transform: "translate(-50%, -50%)",
+              zIndex: 20,
+              fontSize: "1em"
+            }}
+          >
+            {bonusLetter.toUpperCase()}
           </Badge>
         )}
         {errorReason && (
