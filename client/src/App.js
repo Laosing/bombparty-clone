@@ -530,7 +530,6 @@ const useIdle = () => {
     }
 
     const onIdle = () => {
-      console.log("huh?")
       toastId.current = toast.warn(warning, { onOpen, toastId: "idle-toast" })
     }
     const onActive = () => {
