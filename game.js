@@ -23,6 +23,7 @@ const rooms = new Map()
 function connection(io, socket) {
   let _firstRound = true
   let _roomId
+  let _countDownInterval
 
   socket.on("leaveRoom", disconnect)
   socket.on("joinRoom", joinRoom)
@@ -33,7 +34,8 @@ function connection(io, socket) {
   socket.on("setSettings", setSettings)
   socket.on("checkWord", checkWord)
   socket.on("setGlobalInputText", setGlobalInputText)
-  socket.on("startGame", startGame)
+  socket.on("startGame", startCountDown)
+  socket.on("startGameNoCounter", startGameClearCounter)
   socket.on("stopGame", stopGame)
   socket.on("getRoom", relayRoom)
   socket.on("updateName", updateName)
@@ -304,6 +306,28 @@ function connection(io, socket) {
     }
   }
 
+  function startGameClearCounter() {
+    clearInterval(_countDownInterval)
+    startGame()
+    io.sockets.in(_roomId).emit("startCountDown", undefined)
+  }
+
+  function startCountDown() {
+    const { room } = getRoom()
+    room.set("isCountDown", true)
+    let countDown = 5
+    const countDownFn = () => {
+      countDown = countDown - 1
+      io.sockets.in(_roomId).emit("startCountDown", countDown)
+      if (countDown <= 0) {
+        startGameClearCounter()
+      }
+    }
+    _countDownInterval = setInterval(countDownFn, 1000)
+    io.sockets.in(_roomId).emit("startCountDown", countDown)
+    relayRoom()
+  }
+
   function startGame() {
     const { room, settings, timerConstructor } = getRoom()
 
@@ -318,6 +342,7 @@ function connection(io, socket) {
       .set("round", 1)
       .set("hardMode", false)
       .set("startingPlayer", "")
+      .set("isCountDown", false)
 
     _firstRound = true
     setLetterBlend()
@@ -468,7 +493,8 @@ function connection(io, socket) {
       running: setProp("running", false),
       winner: setProp("winner", null),
       settings: setProp("settings", new Map()),
-      private: setProp("private", Boolean(isPrivate))
+      private: setProp("private", Boolean(isPrivate)),
+      isCountDown: setProp("isCountDown", false)
     }
 
     return { room, ...props }

@@ -3,6 +3,7 @@ import io from "socket.io-client"
 
 import "./App.scss"
 import "animate.css"
+import "react-toastify/dist/ReactToastify.css"
 
 import {
   BrowserRouter,
@@ -44,7 +45,8 @@ import {
 import clsx from "clsx"
 
 import soundBoom from "audio/boom.mp3"
-import soundLobby from "audio/lobby-2.m4a"
+import soundLobby from "audio/lobby.m4a"
+import soundLobby2 from "audio/lobby-2.m4a"
 import soundValid from "audio/valid.mp3"
 import soundInvalid from "audio/error.mp3"
 import soundJoining from "audio/joining.mp3"
@@ -52,6 +54,8 @@ import soundLeaving from "audio/leaving.mp3"
 import soundGainedHeart from "audio/gained-heart.wav"
 import soundGainedBonusLetter from "audio/bonus-letter.mp3"
 import soundWinner from "audio/winner.mp3"
+import soundCountDown from "audio/beep.mp3"
+import soundCountDownEnd from "audio/beep-end.mp3"
 
 import { ReactComponent as Bombsvg } from "images/bomb.svg"
 
@@ -65,6 +69,8 @@ import { useInterval } from "functions/hooks"
 import { JellyTriangle } from "@uiball/loaders"
 import confetti from "canvas-confetti"
 import Highlighter from "react-highlight-words"
+import { ToastContainer, toast } from "react-toastify"
+import createActivityDetector from "activity-detector"
 
 const isDevEnv = process.env.NODE_ENV === "development"
 
@@ -85,6 +91,9 @@ const useSoundStore = create(
     (set, get) => ({
       music: true,
       toggleMusic: () => set({ music: !get().music }),
+      musicVersion: 0,
+      toggleMusicVersion: () =>
+        set({ musicVersion: get().musicVersion === 0 ? 1 : 0 }),
       soundEffects: true,
       toggleSoundEffects: () => set({ soundEffects: !get().soundEffects }),
       volume: 0.5,
@@ -210,8 +219,15 @@ function App() {
 }
 
 const Router = () => {
+  const theme = useGameStore((store) => store.theme)
   return (
     <BrowserRouter>
+      <ToastContainer
+        autoClose={false}
+        position="top-center"
+        theme={theme}
+        style={{ width: "100%", maxWidth: "600px" }}
+      />
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<Home />} />
@@ -347,12 +363,12 @@ const Rules = ({ className }) => {
     >
       <h5>Rules 🧐</h5>
       <p className="small">
-        On a player's turn they must type a word (3 characters or more)
-        containing the given letters in order before the bomb explodes{" "}
-        <span onClick={toggleAdmin}>🤯</span> (example: LU - BLUE).
+        On a player's turn they must type a word (3 letters or more) containing
+        the given letters in the <strong>same order</strong> before the bomb
+        explodes <span onClick={toggleAdmin}>🤯</span> (example: LU - BLUE).
       </p>
       <p className="small">
-        If a player does not type a word in time, they lose a life 💀. The last
+        If a player does not type a word in time, they lose a heart 💀. The last
         player remaining wins the game 🎉.
       </p>
       <p className="small mb-0">
@@ -494,9 +510,49 @@ function InitializeRoom() {
   )
 }
 
+const useIdle = () => {
+  const timeout = React.useRef()
+  const toastId = React.useRef()
+  const navigate = useNavigate()
+
+  const activityDetector = React.useMemo(() => {
+    const detector = createActivityDetector({
+      timeToIdle: 1000 * 60 * 5,
+      inactivityEvents: []
+    })
+    const warning =
+      "You there? If not you will be redirected to the homepage in 30 seconds."
+    const onOpen = () => {
+      timeout.current = setTimeout(() => {
+        navigate("/")
+        toast.dismiss(toastId.current)
+      }, 1000 * 30)
+    }
+
+    const onIdle = () => {
+      console.log("huh?")
+      toastId.current = toast.warn(warning, { onOpen, toastId: "idle-toast" })
+    }
+    const onActive = () => {
+      clearTimeout(timeout.current)
+      toast.dismiss(toastId.current)
+    }
+    detector.on("idle", onIdle)
+    detector.on("active", onActive)
+
+    return detector
+  }, [navigate])
+
+  useEffect(() => {
+    return () => activityDetector.stop()
+  }, [activityDetector])
+}
+
 function Room() {
   const { roomId } = useRoom()
   const theme = useGameStore((state) => state.theme)
+
+  useIdle()
 
   return (
     <>
@@ -538,6 +594,20 @@ function Room() {
 
 const Hr = () => <hr className={clsx("hr m-0")} />
 
+const MusicLabel = ({ toggleMusicVersion }) => (
+  <>
+    Music{" "}
+    <Badge
+      as={Button}
+      bg="secondary border-0"
+      style={{ fontSize: ".65em" }}
+      onClick={toggleMusicVersion}
+    >
+      Change song
+    </Badge>
+  </>
+)
+
 function AudioSettings() {
   const [
     music,
@@ -560,6 +630,7 @@ function AudioSettings() {
 
   const theme = useGameStore((store) => store.theme)
   const switchTheme = useGameStore((store) => store.switchTheme)
+  const toggleMusicVersion = useSoundStore((store) => store.toggleMusicVersion)
 
   useEffect(() => {
     Howler.volume(volume)
@@ -573,7 +644,7 @@ function AudioSettings() {
             type="switch"
             checked={!!music}
             onChange={toggleMusic}
-            label="Music"
+            label={<MusicLabel toggleMusicVersion={toggleMusicVersion} />}
           />
           <Form.Check
             type="switch"
@@ -596,7 +667,7 @@ function AudioSettings() {
         defaultValue={volume}
         min="0"
         max="1"
-        step=".1"
+        step=".05"
         onChange={(e) => setVolume(e.target.value)}
       />
     </Form>
@@ -616,23 +687,6 @@ function HeartLetters() {
   if (!running) {
     return null
   }
-
-  // return (
-  //   <div style={{ maxWidth: "400px" }} className="m-auto">
-  //     {[...letters].map((letter) => (
-  //       <Button
-  //         as={"span"}
-  //         size="sm"
-  //         key={letter}
-  //         variant={userLetters.includes(letter) ? "dark" : "outline-secondary"}
-  //         className={`disabled rounded-0 position-relative`}
-  //         style={{ width: "31px", marginRight: "-1px", marginBottom: "-1px" }}
-  //       >
-  //         {letter.toUpperCase()}
-  //       </Button>
-  //     ))}
-  //   </div>
-  // )
 
   return (
     <div style={{ maxWidth: "477px" }} className="m-auto">
@@ -677,6 +731,7 @@ function GameSettings() {
   const disabled = running || canEditSettings
 
   const submitForm = (e) => {
+    if (disabled) return
     e.preventDefault()
     var formData = new FormData(e.target)
     const lives = formData.get("lives")
@@ -832,9 +887,42 @@ const Avatar = ({ id, ...props }) => {
   )
 }
 
+function CountDown() {
+  const { socket } = useSocket()
+  const [countDown, setCountDown] = useState()
+  const [audioCountDown] = useHowl(soundCountDown)
+  const [audioCountDownEnd] = useHowl(soundCountDownEnd)
+
+  useEffect(() => {
+    const triggerCountDown = (val) => {
+      setCountDown(val)
+      if (typeof val === "number") {
+        val === 0 ? audioCountDownEnd.play() : audioCountDown.play()
+      }
+    }
+    socket.on("startCountDown", triggerCountDown)
+    return () => {
+      socket.off("startCountDown", triggerCountDown)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (typeof countDown !== "number") {
+    return null
+  }
+
+  return (
+    <div className="py-5">
+      <div>The game starts in</div>
+      <div className="h1">{countDown}</div>
+    </div>
+  )
+}
+
 function Game() {
   const { socket, userId } = useSocket()
   const { room } = useRoom()
+  const musicVersion = useSoundStore((store) => store.musicVersion)
 
   const letterBlend = room.get("letterBlend")
   const timer = room.get("timer")
@@ -842,13 +930,18 @@ function Game() {
   const winner = room.get("winner")
   const hardMode = room.get("hardMode")
   const users = room.get("users")
+  const isCountDown = room.get("isCountDown")
 
   const isInGame = users.get(userId).inGame
 
-  const [lobbyMusic] = useHowl(soundLobby, "music", {
-    loop: true,
-    autoplay: true
-  })
+  const [lobbyMusic] = useHowl(
+    musicVersion === 0 ? soundLobby2 : soundLobby,
+    "music",
+    {
+      loop: true,
+      autoplay: true
+    }
+  )
 
   const [[boom, boomLetterBlend, boomWord], resetBoom] = useBoomTimeout("boom")
 
@@ -864,16 +957,17 @@ function Game() {
 
   const joinGame = () => socket.emit("joinGame", userId)
   const leaveGame = () => socket.emit("leaveGame", userId)
+  const startGameNoCounter = () => socket.emit("startGameNoCounter")
 
   useEffect(() => {
-    if (running) {
+    if (running || isCountDown) {
       lobbyMusic.stop()
     } else {
       resetBoom()
       const sound = lobbyMusic.play()
       lobbyMusic.fade(0, 1, 2000, sound)
     }
-  }, [running, lobbyMusic, resetBoom])
+  }, [running, lobbyMusic, resetBoom, isCountDown])
 
   return (
     <>
@@ -883,7 +977,7 @@ function Game() {
           gap={3}
           direction="horizontal"
         >
-          {!running && (
+          {!running && !isCountDown && (
             <>
               {isInGame ? (
                 <Button variant="danger" onClick={() => leaveGame()}>
@@ -896,7 +990,7 @@ function Game() {
               )}
             </>
           )}
-          {isInGame && (
+          {isInGame && !isCountDown && (
             <Button
               variant={running ? "danger" : "primary"}
               onClick={toggleGame}
@@ -905,8 +999,12 @@ function Game() {
               {running ? "Stop" : "Start Game"}
             </Button>
           )}
+          {isCountDown && (
+            <Button onClick={startGameNoCounter}>Start Now</Button>
+          )}
         </Stack>
-        {!running && !winner && <Rules />}
+        {!running && !winner && !isCountDown && <Rules />}
+        <CountDown />
         <HeartLetters />
         {running && (
           <div className="my-3 position-relative">
@@ -957,7 +1055,7 @@ function Game() {
             </div>
           </div>
         )}
-        {!running && winner && <Winner winner={winner} />}
+        {!running && winner && !isCountDown && <Winner winner={winner} />}
       </div>
       <Players />
       <Lobby />
