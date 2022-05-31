@@ -16,11 +16,11 @@ function convertFile(file) {
   writeFileSync(`${file}.json`, JSON.stringify(obj, null, 2))
 }
 
-// convertFile("sowpods")
+convertFile("enable2k")
 // convertFile("popular")
 
-// const p = require("./wordlist.json")
-// const s = require("./test.json")
+const p = JSON.parse(readFileSync("./wordlist.json"))
+const s = JSON.parse(readFileSync("./enable2k.json"))
 
-// const g = { ...p, ...s }
-// writeFileSync(`wordlist2.json`, JSON.stringify(g, null, 2))
+const g = { ...p, ...s }
+writeFileSync(`wordlist2.json`, JSON.stringify(g, null, 2))
