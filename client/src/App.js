@@ -547,9 +547,23 @@ const useIdle = () => {
   }, [activityDetector])
 }
 
+const PrivateTooltip = () => {
+  const renderTooltip = (props) => (
+    <Tooltip id="private-tooltip" {...props}>
+      This room is private
+    </Tooltip>
+  )
+  return (
+    <OverlayTrigger overlay={renderTooltip}>
+      <span>🔒</span>
+    </OverlayTrigger>
+  )
+}
+
 function Room() {
-  const { roomId } = useRoom()
+  const { roomId, room } = useRoom()
   const theme = useGameStore((state) => state.theme)
+  const isPrivate = room.get("private")
 
   useIdle()
 
@@ -571,7 +585,8 @@ function Room() {
             <ListGroup className="p-3">
               <ListGroup.Item className="d-flex justify-content-between align-items-center p-2">
                 <span>
-                  Current room: <strong>{roomId}</strong>
+                  Current room: <strong>{roomId}</strong>{" "}
+                  {isPrivate && <PrivateTooltip />}
                 </span>
                 <Button as={Link} to="/" size="sm" variant="danger">
                   Leave room
@@ -641,12 +656,14 @@ function AudioSettings() {
         <Col>
           <Form.Check
             type="switch"
+            id="settingsMusic"
             checked={!!music}
             onChange={toggleMusic}
             label={<MusicLabel toggleMusicVersion={toggleMusicVersion} />}
           />
           <Form.Check
             type="switch"
+            id="settingsSoundEffects"
             checked={!!soundEffects}
             onChange={toggleSoundEffects}
             label="Sound effects"
@@ -655,18 +672,22 @@ function AudioSettings() {
         <Col>
           <Form.Check
             type="switch"
+            id="settingsTheme"
             checked={theme === "dark"}
             onChange={switchTheme}
             label="Dark Mode"
           />
         </Col>
       </Row>
-      <Form.Label className="mt-2 mb-0">Volume</Form.Label>
+      <Form.Label htmlFor="settingsVolume" className="mt-2 mb-0">
+        Volume
+      </Form.Label>
       <Form.Range
+        id="settingsVolume"
         defaultValue={volume}
         min="0"
         max="1"
-        step=".05"
+        step=".025"
         onChange={(e) => setVolume(e.target.value)}
       />
     </Form>
