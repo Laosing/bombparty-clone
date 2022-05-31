@@ -717,6 +717,7 @@ function GameSettings() {
 
   const users = room.get("users")
   const running = room.get("running")
+  const isCountDown = room.get("isCountDown")
   const settings = room.get("settings")
   const lives = settings.get("lives")
   const timer = settings.get("timer")
@@ -727,7 +728,7 @@ function GameSettings() {
     [...users].find(([id, val]) => val.inGame && id === userId)
   )
 
-  const disabled = running || canEditSettings
+  const disabled = running || canEditSettings || isCountDown
 
   const submitForm = (e) => {
     if (disabled) return
