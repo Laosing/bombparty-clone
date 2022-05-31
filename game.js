@@ -141,7 +141,7 @@ function connection(io, socket) {
 
     const letters = new Set([...user.letters, ...value.split("")])
     const bonusletter = getBonusLetters(value, letters)
-    const newLetters = new Set([...letters, bonusletter])
+    const newLetters = new Set([...letters, ...bonusletter])
 
     if (newLetters.size >= 26) {
       users.set(userId, {
