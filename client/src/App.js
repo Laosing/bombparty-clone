@@ -120,12 +120,12 @@ const useGameStore = create(
 )
 
 const Highlight = (props) => {
-  const theme = useGameStore((store) => store.theme)
+  // const theme = useGameStore((store) => store.theme)
   return (
     <Highlighter
-      highlightTag="strong"
-      unhighlightClassName="fw-bold"
-      highlightClassName={theme === "light" ? "text-danger" : "text-warning"}
+      highlightTag="span"
+      unhighlightClassName=""
+      highlightClassName="text-warning"
       autoEscape={true}
       {...props}
     />
@@ -1029,19 +1029,11 @@ function Game() {
         <HeartLetters />
         {running && (
           <div className="my-3 position-relative">
-            {boomWord && (
-              <div
-                key={boomWord}
-                className="text-secondary position-absolute start-0 end-0 top-0 letterblend-fade"
-              >
-                <Highlight
-                  searchWords={[boomLetterBlend?.toUpperCase()]}
-                  textToHighlight={boomWord?.toUpperCase()}
-                />
-              </div>
-            )}
             <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
-            <PlayerInput />
+            <PlayerInput
+              boomWord={boomWord}
+              boomLetterBlend={boomLetterBlend}
+            />
             <div
               className="h3 position-relative m-auto d-flex justify-content-center align-items-center"
               style={{ maxWidth: "80px", height: "80px" }}
@@ -1076,7 +1068,13 @@ function Game() {
             </div>
           </div>
         )}
-        {!running && winner && !isCountDown && <Winner winner={winner} />}
+        {!running && winner && !isCountDown && (
+          <Winner
+            winner={winner}
+            boomWord={boomWord}
+            boomLetterBlend={boomLetterBlend}
+          />
+        )}
       </div>
       <Players />
       <Lobby />
@@ -1136,7 +1134,7 @@ const useEventTimeout = (event, initialValue, timeout = 300) => {
   return [state]
 }
 
-const useBoomTimeout = (event, timeout = 300) => {
+const useBoomTimeout = (event, timeout = 900) => {
   const { socket } = useSocket()
   const [state, setState] = useState([])
 
@@ -1151,10 +1149,7 @@ const useBoomTimeout = (event, timeout = 300) => {
 
   useEffect(() => {
     const triggerEvent = (data) => {
-      const timer = setTimeout(
-        () => setState([false, data[1], data[2]]),
-        timeout
-      )
+      const timer = setTimeout(() => setState([false, "", ""]), timeout)
       setState([...data, timer])
     }
 
@@ -1188,10 +1183,20 @@ function Rounds() {
   )
 }
 
-function Winner({ winner }) {
+function Winner({ winner, boomWord, boomLetterBlend }) {
   const { room } = useRoom()
   const round = room.get("round")
   const hardMode = room.get("hardMode")
+
+  const [lastWord, setLastWord] = useState("")
+  const [lastLetterBlend, setLastLetterBlend] = useState("")
+
+  useEffect(() => {
+    if (boomWord) {
+      setLastWord(boomWord)
+      setLastLetterBlend(boomLetterBlend)
+    }
+  }, [boomWord, boomLetterBlend])
 
   const ref = React.useRef()
   const refCallback = React.useCallback((node) => {
@@ -1232,8 +1237,22 @@ function Winner({ winner }) {
             Round {round}
           </Badge>
         </h3>
+
         <div className="display-3 mb-3" ref={refCallback}>
           {winner.name}
+        </div>
+        <div className="mb-4">
+          <strong>Last word:</strong>{" "}
+          <Badge
+            bg="secondary"
+            className="align-middle"
+            style={{ fontSize: "1em" }}
+          >
+            <Highlight
+              searchWords={[lastLetterBlend?.toUpperCase()]}
+              textToHighlight={lastWord?.toUpperCase()}
+            />
+          </Badge>
         </div>
       </div>
     </div>
@@ -1261,7 +1280,7 @@ function useWordValidation(timeout = 300, callback) {
   return validation
 }
 
-function PlayerInput() {
+function PlayerInput({ boomWord, boomLetterBlend }) {
   const { socket, userId } = useSocket()
   const { room } = useRoom()
 
@@ -1340,6 +1359,22 @@ function PlayerInput() {
             className="position-absolute top-50 end-0 translate-middle-y me-2"
           >
             {deferredValue.length}
+          </Badge>
+        )}
+        {boomWord && (
+          <Badge
+            key={boomWord}
+            className="position-absolute top-100 start-50"
+            style={{
+              transform: "translate(-50%, -50%)",
+              zIndex: 20,
+              fontSize: "1em"
+            }}
+          >
+            <Highlight
+              searchWords={[boomLetterBlend?.toUpperCase()]}
+              textToHighlight={boomWord?.toUpperCase()}
+            />
           </Badge>
         )}
         {bonusLetter && (
