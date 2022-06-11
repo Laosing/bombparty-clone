@@ -744,6 +744,7 @@ function GameSettings() {
   const timer = settings.get("timer")
   const letterBlendCounter = settings.get("letterBlendCounter")
   const hardMode = settings.get("hardMode")
+  const hardModeEnabled = settings.get("hardModeEnabled")
 
   const canEditSettings = !Boolean(
     [...users].find(([id, val]) => val.inGame && id === userId)
@@ -759,7 +760,8 @@ function GameSettings() {
     const timer = formData.get("timer")
     const letterBlendCounter = formData.get("letterBlendCounter")
     const hardMode = formData.get("hardMode")
-    const data = { lives, timer, letterBlendCounter, hardMode }
+    const hardModeEnabled = Boolean(formData.get("hardModeEnabled"))
+    const data = { lives, timer, letterBlendCounter, hardMode, hardModeEnabled }
     socket.emit("setSettings", data)
   }
 
@@ -769,6 +771,7 @@ function GameSettings() {
   const [livesValue, setLivesValue] = useState(lives)
   const [lettersValue, setLettersValue] = useState(letterBlendCounter)
   const [hardModeValue, setHardModeValue] = useState(hardMode)
+  const [hardModeToggle, setHardModeToggle] = useState(hardModeEnabled)
 
   useEffect(() => {
     const triggerValidation = (val) => {
@@ -776,6 +779,7 @@ function GameSettings() {
       setTimerValue(val.get("timer"))
       setLivesValue(val.get("lives"))
       setLettersValue(val.get("letterBlendCounter"))
+      setHardModeToggle(val.get("hardModeEnabled"))
       setNotification(Boolean(val))
       setTimeout(() => setNotification(false), 500)
     }
@@ -846,7 +850,20 @@ function GameSettings() {
               />
             </Form.Group>
             <Form.Group controlId="hardMode">
-              <Form.Label className="mb-0">
+              <Form.Check
+                type="switch"
+                checked={Boolean(hardModeToggle)}
+                onChange={() => setHardModeToggle((p) => !p)}
+                label=""
+                className="d-inline-block"
+                name="hardModeEnabled"
+                id="hardModeEnabled"
+                disabled={disabled}
+              />
+              <Form.Label
+                className="mb-0"
+                style={{ opacity: hardModeToggle ? 1 : 0.5 }}
+              >
                 Hard mode after <strong>{hardModeValue}</strong> rounds{" "}
                 <HardmodeTooltip />
               </Form.Label>
@@ -858,7 +875,7 @@ function GameSettings() {
                 min="1"
                 max="10"
                 step="1"
-                disabled={disabled}
+                disabled={disabled || !hardModeToggle}
                 onChange={(e) => setHardModeValue(e.target.value)}
               />
             </Form.Group>

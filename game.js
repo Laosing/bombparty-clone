@@ -241,7 +241,8 @@ function connection(io, socket) {
   function resetTimer() {
     const { room, timerConstructor, hardMode, settings } = getRoom()
     const settingsTimer = settings.get("timer")
-    if (hardMode && settingsTimer > 1) {
+    const hardModeEnabled = settings.get("hardModeEnabled")
+    if (hardModeEnabled && hardMode && settingsTimer > 1) {
       const num = getRandomInt(0, Math.ceil(settingsTimer / 2))
       const seconds = settingsTimer - num
       timerConstructor.stop()
@@ -424,8 +425,9 @@ function connection(io, socket) {
   function incrementRound() {
     const { room, round, settings } = getRoom()
     const hardMode = settings.get("hardMode")
+    const hardModeEnabled = settings.get("hardModeEnabled")
     const newRound = round + 1
-    if (newRound > hardMode) {
+    if (hardModeEnabled && newRound > hardMode) {
       room.set("hardMode", true)
     }
     room.set("round", newRound)
@@ -520,12 +522,15 @@ function connection(io, socket) {
     const timer = data?.timer || settings.get("timer") || 10
     const lives = data?.lives || settings.get("lives") || 2
     const hardMode = data?.hardMode || settings.get("hardMode") || 5
+    const hardModeEnabled =
+      data?.hardModeEnabled ?? settings.get("hardModeEnabled") ?? true
     const letterBlendCounter =
       data?.letterBlendCounter || settings.get("letterBlendCounter") || 2
     settings
       .set("timer", Number(timer))
       .set("lives", lives)
       .set("hardMode", hardMode)
+      .set("hardModeEnabled", hardModeEnabled)
       .set("letterBlendCounter", letterBlendCounter)
     if (data) {
       io.sockets.in(_roomId).emit("setSettings", serialize(settings))
