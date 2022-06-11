@@ -1248,7 +1248,6 @@ function Winner({ winner, boomWord, boomLetterBlend }) {
           Winner!{" "}
           <Badge
             bg={hardMode ? "danger" : "primary"}
-            className="align-middle"
             style={{ fontSize: ".5em" }}
           >
             Round {round}
@@ -1261,11 +1260,7 @@ function Winner({ winner, boomWord, boomLetterBlend }) {
         {lastWord && (
           <div className="mb-4">
             <strong>Last word:</strong>{" "}
-            <Badge
-              bg="secondary"
-              className="align-middle"
-              style={{ fontSize: "1em" }}
-            >
+            <Badge bg="secondary" style={{ fontSize: "1em" }}>
               <Highlight
                 searchWords={[lastLetterBlend?.toUpperCase()]}
                 textToHighlight={lastWord?.toUpperCase()}
