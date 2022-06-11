@@ -1241,19 +1241,21 @@ function Winner({ winner, boomWord, boomLetterBlend }) {
         <div className="display-3 mb-3" ref={refCallback}>
           {winner.name}
         </div>
-        <div className="mb-4">
-          <strong>Last word:</strong>{" "}
-          <Badge
-            bg="secondary"
-            className="align-middle"
-            style={{ fontSize: "1em" }}
-          >
-            <Highlight
-              searchWords={[lastLetterBlend?.toUpperCase()]}
-              textToHighlight={lastWord?.toUpperCase()}
-            />
-          </Badge>
-        </div>
+        {lastWord && (
+          <div className="mb-4">
+            <strong>Last word:</strong>{" "}
+            <Badge
+              bg="secondary"
+              className="align-middle"
+              style={{ fontSize: "1em" }}
+            >
+              <Highlight
+                searchWords={[lastLetterBlend?.toUpperCase()]}
+                textToHighlight={lastWord?.toUpperCase()}
+              />
+            </Badge>
+          </div>
+        )}
       </div>
     </div>
   )
