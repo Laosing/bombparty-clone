@@ -1085,13 +1085,7 @@ function Game() {
             </div>
           </div>
         )}
-        {!running && winner && !isCountDown && (
-          <Winner
-            winner={winner}
-            boomWord={boomWord}
-            boomLetterBlend={boomLetterBlend}
-          />
-        )}
+        {!running && winner && !isCountDown && <Winner winner={winner} />}
       </div>
       <Players />
       <Lobby />
@@ -1200,20 +1194,12 @@ function Rounds() {
   )
 }
 
-function Winner({ winner, boomWord, boomLetterBlend }) {
+function Winner({ winner }) {
   const { room } = useRoom()
   const round = room.get("round")
   const hardMode = room.get("hardMode")
-
-  const [lastWord, setLastWord] = useState("")
-  const [lastLetterBlend, setLastLetterBlend] = useState("")
-
-  useEffect(() => {
-    if (boomWord) {
-      setLastWord(boomWord)
-      setLastLetterBlend(boomLetterBlend)
-    }
-  }, [boomWord, boomLetterBlend])
+  const roomLetterBlendWord = room.get("letterBlendWord")
+  const roomLetterBlend = room.get("letterBlend")
 
   const ref = React.useRef()
   const refCallback = React.useCallback((node) => {
@@ -1257,13 +1243,13 @@ function Winner({ winner, boomWord, boomLetterBlend }) {
         <div className="display-3 mb-3" ref={refCallback}>
           {winner.name}
         </div>
-        {lastWord && (
+        {roomLetterBlendWord && (
           <div className="mb-4">
             <strong>Last word:</strong>{" "}
             <Badge bg="secondary" style={{ fontSize: "1em" }}>
               <Highlight
-                searchWords={[lastLetterBlend?.toUpperCase()]}
-                textToHighlight={lastWord?.toUpperCase()}
+                searchWords={[roomLetterBlend?.toUpperCase()]}
+                textToHighlight={roomLetterBlendWord?.toUpperCase()}
               />
             </Badge>
           </div>

@@ -379,12 +379,7 @@ function connection(io, socket) {
     const { room, timerConstructor } = getRoom()
     timerConstructor.stop()
     timerConstructor.removeAllEventListeners()
-    room
-      .set("winner", player)
-      .set("running", false)
-      .set("currentPlayer", "")
-      .set("letterBlend", "")
-      .set("letterBlendWord", "")
+    room.set("winner", player).set("running", false).set("currentPlayer", "")
     relayRoom()
   }
 
