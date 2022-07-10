@@ -17,14 +17,14 @@ function Messages() {
   const ref = React.useRef()
 
   React.useEffect(() => {
-    if (messages.size > 3) {
-      ref?.current?.scrollIntoView({ behavior: "smooth" })
+    if (ref?.current) {
+      ref.current.scrollTop = ref.current.scrollHeight
     }
   }, [messages.size])
 
   return (
     <>
-      <div className="overflow-auto" style={{ flex: "1 1 7em" }}>
+      <div className="overflow-auto" style={{ flex: "1 1 7em" }} ref={ref}>
         <ListGroup className="mt-auto">
           {[...messages]
             .sort((a, b) => a.time - b.time)
@@ -39,7 +39,6 @@ function Messages() {
                 <span className="text-secondary">{message.value}</span>
               </ListGroupItem>
             ))}
-          <div ref={ref}></div>
         </ListGroup>
       </div>
     </>

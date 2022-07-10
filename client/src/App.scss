@@ -36,8 +36,7 @@ body,
 .boom {
   position: relative;
   z-index: 10;
-  animation: boom 0.15s ease;
-  animation-fill-mode: forwards;
+  animation: boom 0.25s ease;
 }
 
 .bombEntrance {
@@ -85,9 +84,17 @@ body,
     transform: scale(1, 1);
     opacity: 1;
   }
-  100% {
-    transform: scale(1.5, 1.5);
+  20% {
+    transform: scale(1.7, 1.7);
     opacity: 0;
+  }
+  30% {
+    transform: scale(0, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1, 1);
+    opacity: 1;
   }
 }
 

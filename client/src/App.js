@@ -27,7 +27,6 @@ import { deserialize } from "functions/deserialize"
 import { MessagesWrapper } from "components/Messages"
 
 import {
-  Navbar,
   Container,
   Button,
   Form,
@@ -119,29 +118,29 @@ const useGameStore = create(
   )
 )
 
-const Highlight = (props) => {
+const Highlight = ({ highlightColor, ...props }) => {
   // const theme = useGameStore((store) => store.theme)
   return (
     <Highlighter
       highlightTag="span"
       unhighlightClassName=""
-      highlightClassName="text-warning"
+      highlightClassName={highlightColor || "text-warning"}
       autoEscape={true}
       {...props}
     />
   )
 }
 
-function Header({ children }) {
-  return (
-    <Navbar bg="dark" variant="dark">
-      <Container fluid>
-        <Navbar.Brand className="m-auto p-0">💥💣 Bombparty 💣💥</Navbar.Brand>
-        {children}
-      </Container>
-    </Navbar>
-  )
-}
+// function Header({ children }) {
+//   return (
+//     <Navbar bg="dark" variant="dark">
+//       <Container fluid>
+//         <Navbar.Brand className="m-auto p-0">💥💣 Bombparty 💣💥</Navbar.Brand>
+//         {children}
+//       </Container>
+//     </Navbar>
+//   )
+// }
 
 function HeaderUser() {
   const { socket } = useSocket()
@@ -173,6 +172,7 @@ function HeaderUser() {
           onClick={editName}
           size="sm"
           variant="link"
+          title="Edit name"
         >
           ✏️
         </Button>
@@ -186,7 +186,7 @@ function AvatarSettings() {
   const { room } = useRoom()
 
   const users = room.get("users")
-  const currentPlayer = users.get(userId)
+  const currentGroup = users.get(userId)
 
   const editAvatar = () => {
     socket.emit("updateAvatar", userId)
@@ -195,13 +195,14 @@ function AvatarSettings() {
   return (
     <div className="d-flex justify-content-center align-items-center ">
       <div className="position-relative">
-        <Avatar style={{ width: "75px" }} id={currentPlayer.avatar} />
+        <Avatar style={{ width: "75px" }} id={currentGroup.avatar} />
         <Button
           style={{ transform: "translate(70%, 0)" }}
           className="text-decoration-none border-0 position-absolute bottom-0 end-0"
           onClick={editAvatar}
           size="sm"
           variant="link"
+          title="Change avatar"
         >
           ✒️
         </Button>
@@ -561,9 +562,26 @@ const PrivateTooltip = () => {
 }
 
 function Room() {
+  const { socket } = useSocket()
   const { roomId, room } = useRoom()
   const theme = useGameStore((state) => state.theme)
   const isPrivate = room.get("private")
+  const isAdmin = useGameStore((state) => state.isAdmin)
+
+  const resetClient = () => socket.emit("resetClient")
+
+  useEffect(() => {
+    const reset = () => {
+      localStorage.removeItem("sound-settings")
+      localStorage.removeItem("game-settings")
+      window.location.reload()
+    }
+
+    socket.on("resetClient", reset)
+    return () => {
+      socket.off("resetClient", reset)
+    }
+  }, [socket])
 
   useIdle()
 
@@ -571,6 +589,15 @@ function Room() {
     <>
       {/* <Header /> */}
       <Container fluid className={clsx("d-flex flex-grow-1", theme)}>
+        {isAdmin && (
+          <Button
+            variant="link"
+            onClick={resetClient}
+            className="position-absolute top-0 end-0 text-decoration-none border border-top-0 border-end-0"
+          >
+            ☠️
+          </Button>
+        )}
         <Row className="flex-grow-1">
           <Col md={8}>
             <Layout className="p-0">
@@ -699,9 +726,12 @@ function HeartLetters() {
   const { room } = useRoom()
 
   const running = room.get("running")
-  const user = room.get("users").get(userId)
-  const userLetters = [...user.letters]
-  const userBonusLetters = [...user.bonusLetters]
+  const groups = room.get("groups")
+
+  const groupId = room.get("users").get(userId).group
+  const group = groups.get(groupId)
+  const userLetters = [...group.letters]
+  const userBonusLetters = [...group.bonusLetters]
   const alphabet = "abcdefghijklmnopqrstuvwxyz"
 
   if (!running) {
@@ -961,6 +991,7 @@ function Game() {
   const { socket, userId } = useSocket()
   const { room } = useRoom()
   const musicVersion = useSoundStore((store) => store.musicVersion)
+  const name = useGameStore((state) => state.name)
 
   const letterBlend = room.get("letterBlend")
   const timer = room.get("timer")
@@ -968,9 +999,13 @@ function Game() {
   const winner = room.get("winner")
   const hardMode = room.get("hardMode")
   const users = room.get("users")
+  const groups = room.get("groups")
   const isCountDown = room.get("isCountDown")
 
-  const isInGame = users.get(userId).inGame
+  const hasPlayers = Array.from(groups).filter(
+    ([, group]) => group.members.size
+  ).length
+  const isInGame = users.get(userId).inGame && hasPlayers
 
   const [lobbyMusic] = useHowl(
     musicVersion === 0 ? soundLobby2 : soundLobby,
@@ -993,7 +1028,7 @@ function Game() {
     }
   }
 
-  const joinGame = () => socket.emit("joinGame", userId)
+  const joinGame = () => socket.emit("joinGame", userId, name)
   const leaveGame = () => socket.emit("leaveGame", userId)
   const startGameNoCounter = () => socket.emit("startGameNoCounter")
 
@@ -1037,13 +1072,13 @@ function Game() {
               {running ? "Stop" : "Start Game"}
             </Button>
           )}
-          {isCountDown && (
+          {isInGame && isCountDown && (
             <Button onClick={startGameNoCounter}>Start Now</Button>
           )}
         </Stack>
         {!running && !winner && !isCountDown && <Rules />}
         <CountDown />
-        <HeartLetters />
+        {running && isInGame && <HeartLetters />}
         {running && (
           <div className="my-3 position-relative">
             <div className="h1 mb-0 mt-2">{letterBlend?.toUpperCase()}</div>
@@ -1067,12 +1102,7 @@ function Game() {
               >
                 {timer}
               </div>
-              <div
-                className={clsx(
-                  boom ? "boom" : "bombEntrance",
-                  "position-relative"
-                )}
-              >
+              <div className={clsx(boom && "boom", "position-relative")}>
                 <Bombsvg
                   className={clsx(
                     "animate__animated animate__infinite animate__pulse w-100"
@@ -1196,6 +1226,7 @@ function Rounds() {
 
 function Winner({ winner }) {
   const { room } = useRoom()
+  const users = room.get("users")
   const round = room.get("round")
   const hardMode = room.get("hardMode")
   const roomLetterBlendWord = room.get("letterBlendWord")
@@ -1225,13 +1256,8 @@ function Winner({ winner }) {
   return (
     <div>
       <div className="mt-2 animate__animated animate__bounceIn">
-        <Avatar
-          className="animate__animated animate__infinite animate__pulse animate__slow"
-          style={{ width: "10em", marginBottom: "-.5em" }}
-          id={winner.avatar}
-        />
-        <h3 className="mb-0">
-          Winner!{" "}
+        <h3 className="mb-3" ref={refCallback}>
+          {`Winner${winner.members.size === 1 ? "" : "s"}! `}
           <Badge
             bg={hardMode ? "danger" : "primary"}
             style={{ fontSize: ".5em" }}
@@ -1240,9 +1266,29 @@ function Winner({ winner }) {
           </Badge>
         </h3>
 
-        <div className="display-3 mb-3" ref={refCallback}>
-          {winner.name}
-        </div>
+        <Row className="justify-content-center align-items-center">
+          {[...winner.members].map((user) => (
+            <Col key={users.get(user).id} className="col-auto">
+              <div className="mb-3">
+                <Avatar
+                  className="animate__animated animate__infinite animate__pulse animate__slow w-100"
+                  style={{ maxWidth: "150px", marginBottom: "-.5em" }}
+                  id={users.get(user).avatar}
+                />
+                <div
+                  className="h4"
+                  style={{
+                    fontSize: `calc(2em / ${winner.members.size * 0.7})`
+                  }}
+                  ref={refCallback}
+                >
+                  {users.get(user).name}
+                </div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+
         {roomLetterBlendWord && (
           <div className="mb-4">
             <strong>Last word:</strong>{" "}
@@ -1286,24 +1332,28 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
 
   const [value, setValue] = useState("")
   const deferredValue = useDeferredValue(value)
+  const textareaRef = React.useRef()
+  const cursorPos = React.useRef()
 
   const validation = useWordValidation(500)
 
   const [bonusLetter] = useEventTimeout("bonusLetter", "", 1000)
 
-  const currentPlayer = room.get("currentPlayer")
-  const isCurrentPlayer = currentPlayer === userId
+  const currentGroup = room.get("currentGroup")
+  const groups = room.get("groups")
+  const iscurrentGroup = groups.get(currentGroup)?.members?.has?.(userId)
 
   const submitForm = (e) => {
     e.preventDefault()
-    socket.emit("checkWord", value, userId)
+    socket.emit("checkWord", value, currentGroup)
     e.target.reset()
   }
 
   const onChange = (value) => {
-    const val = value.trim().toLowerCase()
+    const val = value.toLowerCase()
     setValue(val)
     socket.emit("setGlobalInputText", val)
+    cursorPos.current = textareaRef.current.selectionStart
   }
 
   const color =
@@ -1324,15 +1374,18 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
 
   useEffect(() => {
     setValue("")
-  }, [currentPlayer])
+  }, [currentGroup])
 
   useEffect(() => {
     socket.on("setGlobalInputText", setValue)
     return () => {
       socket.off("setGlobalInputText", setValue)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [socket])
+
+  useEffect(() => {
+    textareaRef.current.setSelectionRange(cursorPos.current, cursorPos.current)
+  }, [deferredValue])
 
   return (
     <>
@@ -1343,11 +1396,13 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
       >
         <Form.Control
           className={clsx(color)}
-          key={isCurrentPlayer}
+          key={iscurrentGroup}
           autoFocus
           onChange={(e) => onChange(e.target.value)}
-          disabled={!isCurrentPlayer}
-          {...(!isCurrentPlayer && { value: deferredValue })}
+          disabled={!iscurrentGroup}
+          // {...(!iscurrentGroup && { value: deferredValue })}
+          value={deferredValue}
+          ref={textareaRef}
         />
         {deferredValue && (
           <Badge
@@ -1430,11 +1485,13 @@ const useHowl = (src, type = "effect", props) => {
 }
 
 function Players() {
-  const { socket } = useSocket()
+  const { socket, userId } = useSocket()
   const { room } = useRoom()
   const players = room.get("users")
+  const user = players.get(userId)
+  const groups = room.get("groups")
   const running = room.get("running")
-  const currentPlayer = room.get("currentPlayer")
+  const currentGroup = room.get("currentGroup")
 
   const isAdmin = useGameStore((state) => state.isAdmin)
 
@@ -1488,7 +1545,13 @@ function Players() {
       : false
 
   const kickPlayer = (userId) => socket.emit("kickPlayer", userId)
-  const highestScore = Math.max(...[...players].map(([, val]) => val.score))
+  const highestScore = Math.max(...[...groups].map(([, val]) => val.score))
+
+  const joinGroup = (groupId) => socket.emit("joinGroup", groupId, userId)
+
+  const isInGroup = (groupId) => user.group !== groupId
+
+  // const hasGroupMembers = groups.get(user.group)?.members.size === 1
 
   return (
     <div>
@@ -1498,104 +1561,155 @@ function Players() {
         className="m-auto position-relative px-4"
       >
         <Rounds />
-        <ListGroup>
-          {Array.from(players)
-            .filter(([_, val]) => val.inGame)
-            .map(([id, value]) => (
-              <Stack
-                direction="horizontal"
-                gap={2}
-                key={id}
-                className={clsx(
-                  "position-relative",
-                  "list-group-item",
-                  running &&
-                    value.lives <= 0 &&
-                    "list-group-item-secondary text-decoration-line-through",
-                  id === currentPlayer && "list-group-item-primary"
-                )}
-              >
-                <span
-                  className="position-absolute top-50 start-0"
-                  style={{ width: "35px", transform: `translate(-120%, -50%)` }}
-                >
-                  {!running && <Avatar id={value.avatar} />}
-                  {running &&
-                    (value.lives > 0 ? <Avatar id={value.avatar} /> : "💀")}
-                  <Badge
-                    className="position-absolute top-0 start-100 translate-middle"
-                    bg={
-                      highestScore > 0 && value.score === highestScore
-                        ? "primary"
-                        : "secondary"
-                    }
-                    style={{ fontSize: ".65em" }}
-                  >
-                    {value.score}
-                  </Badge>
-                </span>
-                {isAdmin && (
-                  <span
-                    className="position-absolute top-50 end-0"
-                    style={{
-                      width: "35px",
-                      transform: `translate(100%, -50%)`
-                    }}
-                    onClick={() => kickPlayer(id)}
-                  >
-                    🥾
-                  </span>
-                )}
-                <span
-                  className={clsx(
-                    id === currentPlayer && "fw-bold",
-                    id === validation.currentPlayer && textColor
-                  )}
-                >
-                  {id === currentPlayer && (
-                    <span className="position-absolute top-50 start-100 translate-middle">
-                      <span className="animate__animated animate__infinite animate__pulse d-block">
-                        💣
-                      </span>
-                    </span>
-                  )}
-                  {value.name}
-                </span>
-                {running && (
-                  <span className="text-danger">
-                    {Array.from(
-                      Array(Number(value?.lives) || 0),
-                      (_, index) => (
-                        <span key={index}>❤</span>
-                      )
+
+        {Array.from(groups, ([groupId, group]) => {
+          return (
+            <ListGroup key={groupId} className="mb-3">
+              {[...group.members].map((memberId, index) => {
+                const member = players.get(memberId)
+                const onlyRowOne = index === 0
+                return (
+                  <Stack
+                    direction="horizontal"
+                    gap={2}
+                    key={memberId}
+                    className={clsx(
+                      "position-relative",
+                      "list-group-item",
+                      running &&
+                        group.lives <= 0 &&
+                        "list-group-item-secondary text-decoration-line-through",
+                      groupId === currentGroup && "list-group-item-primary"
                     )}
-                  </span>
-                )}
-                {running && id !== currentPlayer && (
-                  <>
-                    <span className="ms-auto small">
-                      <Highlight
-                        searchWords={[value.letterBlend]}
-                        textToHighlight={value.text}
-                      />
+                  >
+                    <span
+                      className="position-absolute top-50 start-0"
+                      style={{
+                        width: "35px",
+                        transform: `translate(-120%, -50%)`
+                      }}
+                    >
+                      {!running && <Avatar id={member.avatar} />}
+                      {running &&
+                        (group.lives > 0 ? (
+                          <Avatar id={member.avatar} />
+                        ) : (
+                          "💀"
+                        ))}
+                      {onlyRowOne && (
+                        <Badge
+                          className="position-absolute top-0 start-100 translate-middle"
+                          bg={
+                            highestScore > 0 && group.score === highestScore
+                              ? "primary"
+                              : "secondary"
+                          }
+                          style={{ fontSize: ".65em" }}
+                        >
+                          {group.score}
+                        </Badge>
+                      )}
                     </span>
-                    {Boolean(value.text.length) && (
-                      <Badge
-                        bg={
-                          value.text.length > LETTER_BONUS
-                            ? "warning text-dark"
-                            : "secondary"
-                        }
-                        style={{ fontSize: ".5em" }}
+
+                    {isAdmin && (
+                      <Button
+                        variant="link"
+                        className="position-absolute top-50 end-0 text-decoration-none p-0"
+                        style={{
+                          width: "35px",
+                          transform: `translate(100%, -50%)`
+                        }}
+                        onClick={() => kickPlayer(member.id)}
                       >
-                        {value.text.length}
-                      </Badge>
+                        🥾
+                      </Button>
                     )}
-                  </>
-                )}
-              </Stack>
-            ))}
-        </ListGroup>
+
+                    <span
+                      className={clsx(
+                        groupId === currentGroup && "fw-bold",
+                        groupId === validation.currentGroup && textColor
+                      )}
+                    >
+                      {groupId === currentGroup && onlyRowOne && (
+                        <span className="position-absolute top-50 start-100 translate-middle">
+                          <span className="animate__animated animate__infinite animate__pulse d-block">
+                            💣
+                          </span>
+                        </span>
+                      )}
+                      {member.name}
+                    </span>
+
+                    {running && onlyRowOne && (
+                      <span className="text-danger">
+                        {Array.from(
+                          Array(Number(group?.lives) || 0),
+                          (_, index) => (
+                            <span key={index}>❤</span>
+                          )
+                        )}
+                      </span>
+                    )}
+
+                    {running && groupId !== currentGroup && onlyRowOne && (
+                      <>
+                        <span className="ms-auto small">
+                          <Highlight
+                            highlightColor="text-danger"
+                            searchWords={[group.letterBlend]}
+                            textToHighlight={group.text}
+                          />
+                        </span>
+                        {Boolean(group.text.length) && (
+                          <Badge
+                            bg={
+                              group.text.length > LETTER_BONUS
+                                ? "warning text-dark"
+                                : "secondary"
+                            }
+                            style={{ fontSize: ".5em" }}
+                          >
+                            {group.text.length}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+
+                    {isInGroup(groupId) &&
+                      !running &&
+                      onlyRowOne &&
+                      user.inGame && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="ms-auto py-0 text-decoration-none"
+                          onClick={() => joinGroup(groupId)}
+                        >
+                          Join Team
+                        </Button>
+                      )}
+
+                    {!isInGroup(groupId) &&
+                      group.members.size > 1 &&
+                      !running &&
+                      onlyRowOne &&
+                      user.inGame && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="ms-auto py-0 text-decoration-none"
+                          onClick={() => joinGroup()}
+                        >
+                          Leave team
+                        </Button>
+                      )}
+                  </Stack>
+                )
+              })}
+            </ListGroup>
+          )
+        })}
       </div>
     </div>
   )

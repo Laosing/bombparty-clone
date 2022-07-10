@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid"
 import serialize from "serialize-javascript"
-import { Timer } from "easytimer.js"
+import { Timer } from "./Timer.js"
 import { readFileSync } from "fs"
 import { getRandomLettersFn } from "./data/randomLetters.js"
 import { log } from "./index.js"
@@ -23,12 +23,13 @@ const rooms = new Map()
 function connection(io, socket) {
   let _firstRound = true
   let _roomId
-  let _countDownInterval
 
+  socket.on("resetClient", resetClient)
   socket.on("leaveRoom", disconnect)
   socket.on("joinRoom", joinRoom)
   socket.on("getRooms", getRooms)
   socket.on("joinGame", joinGame)
+  socket.on("joinGroup", joinGroup)
   socket.on("leaveGame", leaveGame)
   socket.on("kickPlayer", leaveGame)
   socket.on("setSettings", setSettings)
@@ -87,14 +88,81 @@ function connection(io, socket) {
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: true, score: 0 })
+
+    initializeGroup(userId)
+
     io.sockets.in(_roomId).emit("userJoined", userId)
     relayRoom()
+  }
+
+  function initializeGroup(userId) {
+    const { groups, users } = getRoom()
+    const id = nanoid()
+
+    groups.set(id, {
+      id,
+      letters: new Set(),
+      score: 0,
+      bonusLetters: new Set(),
+      members: new Set([userId])
+    })
+
+    const user = users.get(userId)
+    users.set(userId, { ...user, group: id })
+  }
+
+  function joinGroup(groupId, memberId) {
+    const { groups, users } = getRoom()
+    const user = users.get(memberId)
+    const group = groups.get(groupId)
+
+    leaveGroup(memberId)
+
+    if (groupId) {
+      groups.set(groupId, {
+        ...group,
+        members: new Set([memberId, ...group.members])
+      })
+      users.set(memberId, { ...user, group: groupId })
+    } else {
+      initializeGroup(memberId)
+    }
+
+    // io.sockets.in(_roomId).emit("joinedGroup", serializeJavascript(groups))
+    relayRoom()
+  }
+
+  function leaveGroup(memberId) {
+    const { groups, users, room } = getRoom()
+    const user = users.get(memberId)
+    const group = groups.get(user.group)
+
+    if (group) {
+      group.members.delete(memberId)
+      users.set(memberId, { ...user, group: "" })
+      cleanGroups()
+    }
+    room.set("winner", null)
+  }
+
+  function cleanGroups() {
+    const { groups } = getRoom()
+    groups.forEach((group) => {
+      if (group.members.size === 0) {
+        groups.delete(group.id)
+      }
+    })
   }
 
   function leaveGame(userId) {
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: false })
+
+    leaveGroup(userId, true)
+
+    checkNoUsers()
+
     relayRoom()
   }
 
@@ -113,6 +181,10 @@ function connection(io, socket) {
 
   function setGlobalInputText(text = "") {
     io.sockets.in(_roomId).emit("setGlobalInputText", text)
+  }
+
+  function resetClient() {
+    io.sockets.in(_roomId).emit("resetClient")
   }
 
   function updateName(value, userId) {
@@ -135,27 +207,27 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function setHeartLetters(userId, value) {
-    const { users } = getRoom()
-    const user = users.get(userId)
+  function setHeartLetters(groupId, value) {
+    const { groups } = getRoom()
+    const group = groups.get(groupId)
 
-    const letters = new Set([...user.letters, ...value.split("")])
+    const letters = new Set([...group.letters, ...value.split("")])
     const bonusletter = getBonusLetters(value, letters)
     const newLetters = new Set([...letters, ...bonusletter])
 
     if (newLetters.size >= 26) {
-      users.set(userId, {
-        ...user,
-        lives: Number(user.lives) >= 10 ? 10 : Number(user.lives) + 1,
+      groups.set(groupId, {
+        ...group,
+        lives: Number(group.lives) >= 10 ? 10 : Number(group.lives) + 1,
         letters: new Set(),
         bonusLetters: new Set()
       })
-      io.sockets.in(_roomId).emit("gainedHeart", userId)
+      io.sockets.in(_roomId).emit("gainedHeart", groupId)
     } else {
-      users.set(userId, {
-        ...user,
+      groups.set(groupId, {
+        ...group,
         letters: newLetters,
-        bonusLetters: new Set([...user.bonusLetters, ...bonusletter])
+        bonusLetters: new Set([...group.bonusLetters, ...bonusletter])
       })
     }
   }
@@ -173,32 +245,26 @@ function connection(io, socket) {
     return ""
   }
 
-  function checkWord(value, userId) {
-    const { letterBlend, words, currentPlayer, timerConstructor } = getRoom()
+  function checkWord(value, groupId) {
+    const { letterBlend, words, currentGroup, timerConstructor } = getRoom()
     const isBlend = value.includes(letterBlend.toLowerCase())
     const isDictionary = !!dictionary[value]
     const isUnique = !words.has(value)
     const isLongEnough = value.length >= 3
-    const isCurrentPlayer = currentPlayer === userId
+    const isCurrentGroup = currentGroup === groupId
 
-    if (
-      isBlend &&
-      isDictionary &&
-      isUnique &&
-      isLongEnough &&
-      isCurrentPlayer
-    ) {
+    if (isBlend && isDictionary && isUnique && isLongEnough && isCurrentGroup) {
       log.green(`valid word: ${value}`)
       io.sockets
         .in(_roomId)
-        .emit("wordValidation", true, { value, letterBlend, currentPlayer })
+        .emit("wordValidation", true, { value, letterBlend, currentGroup })
       words.add(value)
-      setPlayerText(userId, value)
-      setHeartLetters(userId, value)
+      setGroupText(groupId, value)
+      setHeartLetters(groupId, value)
       resetletterBlendCounter()
       setLetterBlend()
       timerConstructor.reset()
-      switchPlayer()
+      switchGroup()
     } else {
       log.green(`invalid word: ${value}`)
       io.sockets.in(_roomId).emit("wordValidation", false, {
@@ -206,36 +272,38 @@ function connection(io, socket) {
         isDictionary,
         isUnique,
         isLongEnough,
-        currentPlayer
+        currentGroup
       })
-      setPlayerText(userId, "")
+      setGroupText(groupId, "")
     }
     setGlobalInputText()
     relayRoom()
   }
 
-  function switchPlayer() {
-    const { room, users, currentPlayer } = getRoom()
-    const nextPlayer = !currentPlayer
-      ? getRandomPlayer(users)
-      : getNextPlayer(users)
-    room.set("currentPlayer", nextPlayer)
-    setPlayerText(nextPlayer, "")
+  function switchGroup() {
+    const { room, groups, currentGroup } = getRoom()
+    const nextGroup = !currentGroup
+      ? getRandomPlayer(groups)
+      : getNextPlayer(groups)
+    room.set("currentGroup", nextGroup)
+    setGroupText(nextGroup, "")
   }
 
   function loseLife() {
-    const { users, currentPlayer } = getRoom()
-    const player = users.get(currentPlayer)
-    if (player) {
-      const lives = player.lives > 0 ? player.lives - 1 : 0
-      users.set(currentPlayer, { ...player, lives })
+    const { groups, currentGroup } = getRoom()
+    const group = groups.get(currentGroup)
+    if (group) {
+      const lives = group.lives > 0 ? group.lives - 1 : 0
+      groups.set(currentGroup, { ...group, lives })
     }
   }
 
-  function setPlayerText(userId, text) {
-    const { users, letterBlend } = getRoom()
-    const player = users.get(userId)
-    users.set(userId, { ...player, text, letterBlend })
+  function setGroupText(groupId, text) {
+    const { groups, letterBlend } = getRoom()
+    const group = groups.get(groupId)
+    if (group) {
+      groups.set(groupId, { ...group, text, letterBlend })
+    }
   }
 
   function resetTimer() {
@@ -245,8 +313,7 @@ function connection(io, socket) {
     if (hardModeEnabled && hardMode && settingsTimer > 1) {
       const num = getRandomInt(0, Math.ceil(settingsTimer / 2))
       const seconds = settingsTimer - num
-      timerConstructor.stop()
-      timerConstructor.start({ startValues: { seconds } })
+      timerConstructor.start(seconds)
       room.set("timer", seconds)
     } else {
       room.set("timer", settingsTimer)
@@ -254,37 +321,37 @@ function connection(io, socket) {
   }
 
   function updateTimer() {
-    const { room, timerConstructor, users, currentPlayer } = getRoom()
+    const { room, timerConstructor, groups, currentGroup } = getRoom()
 
     checkNoUsers()
-    const leftGame = !Array.from(users).find(([id]) => id === currentPlayer)
+    const leftGame = !Array.from(groups).find(([id]) => id === currentGroup)
     if (leftGame) {
-      switchPlayer()
+      switchGroup()
       timerConstructor.reset()
     }
 
-    const { seconds } = timerConstructor.getTimeValues()
+    const seconds = timerConstructor.getTime()
     room.set("timer", seconds)
     if (seconds > 0) {
       relayRoom()
     }
   }
 
-  function updateSecondsTimer() {
+  function onTimerFinish() {
     const {
       timerConstructor,
-      currentPlayer,
+      currentGroup,
       letterBlend,
       letterBlendWord,
       letterBlendCounter
     } = getRoom()
     const wordDetails =
       letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : ["", ""]
-    io.sockets.in(_roomId).emit("boom", [currentPlayer, ...wordDetails])
+    io.sockets.in(_roomId).emit("boom", [currentGroup, ...wordDetails])
     loseLife()
     const hasWinner = checkGameState()
     if (!hasWinner) {
-      switchPlayer()
+      switchGroup()
       switchletterBlend()
       timerConstructor.reset()
     }
@@ -308,23 +375,36 @@ function connection(io, socket) {
   }
 
   function startGameClearCounter() {
-    clearInterval(_countDownInterval)
+    const { room } = getRoom()
+    clearInterval(room.get("_countDownInterval"))
     startGame()
     io.sockets.in(_roomId).emit("startCountDown", undefined)
   }
 
   function startCountDown() {
     const { room } = getRoom()
-    room.set("isCountDown", true)
+
+    const interval = setInterval(countDownFn, 1000)
+    const intervalId = interval[Symbol.toPrimitive]()
+
+    room.set("isCountDown", true).set("_countDownInterval", intervalId)
+
     let countDown = 5
-    const countDownFn = () => {
-      countDown = countDown - 1
+    function countDownFn() {
+      if (checkNoUsers()) {
+        room.set("isCountDown", false)
+        io.sockets.in(_roomId).emit("startCountDown", undefined)
+        clearInterval(room.get("_countDownInterval"))
+        relayRoom()
+        return
+      }
+      countDown -= 1
       io.sockets.in(_roomId).emit("startCountDown", countDown)
       if (countDown <= 0) {
         startGameClearCounter()
       }
     }
-    _countDownInterval = setInterval(countDownFn, 1000)
+
     io.sockets.in(_roomId).emit("startCountDown", countDown)
     relayRoom()
   }
@@ -333,7 +413,7 @@ function connection(io, socket) {
     const { room, settings, timerConstructor } = getRoom()
 
     // No players, don't start the game
-    if (checkNoUsers()) return
+    if (checkNoUsers()) return stopGame()
 
     const startTimer = settings.get("timer")
     room
@@ -348,67 +428,68 @@ function connection(io, socket) {
     _firstRound = true
     setLetterBlend()
     resetletterBlendCounter()
-    resetUser()
-    switchPlayer()
+    resetGroup()
+    switchGroup()
 
-    timerConstructor.on("started", updateTimer)
     timerConstructor.on("reset", resetTimer)
     timerConstructor.on("secondsUpdated", updateTimer)
-    timerConstructor.on("targetAchieved", updateSecondsTimer)
+    timerConstructor.on("targetAchieved", onTimerFinish)
 
-    timerConstructor.start({ startValues: { seconds: startTimer } })
+    timerConstructor.start(startTimer)
   }
 
   function checkGameState() {
-    const { users } = getRoom()
-    const players = Array.from(users).filter(([, val]) => val.inGame)
-    const remainingPlayers = players.filter(([, val]) => val.lives > 0)
-    const lastPlayer = remainingPlayers.length <= 1
-    const singlePlayer = players.length === 1 ? players[0][1].lives <= 1 : false
-    const hasWinner = players.length === 1 ? singlePlayer : lastPlayer
+    const { groups } = getRoom()
+    const _groups = Array.from(groups)
+    const remainingGroups = _groups.filter(([, val]) => val.lives > 0)
+    const lastGroup = remainingGroups.length <= 1
+    const singlePlayer = _groups.length === 1 ? _groups[0][1].lives <= 0 : false
+    const hasWinner = _groups.length === 1 ? singlePlayer : lastGroup
     if (hasWinner) {
       io.sockets.in(_roomId).emit("winner", true)
-      const [userId, winner] = remainingPlayers[0] || players[0]
-      users.set(userId, { ...winner, score: winner.score + 1 })
+      const [groupId, winner] = remainingGroups[0] || _groups[0]
+      groups.set(groupId, { ...winner, score: winner.score + 1 })
       stopGame(winner)
     }
     return hasWinner
   }
 
-  function stopGame(player) {
+  function stopGame(group) {
     const { room, timerConstructor } = getRoom()
     timerConstructor.stop()
     timerConstructor.removeAllEventListeners()
-    room.set("winner", player).set("running", false).set("currentPlayer", "")
+    room
+      .set("winner", group)
+      .set("running", false)
+      .set("currentGroup", "")
+      .set("isCountDown", false)
     relayRoom()
   }
 
-  function resetUser() {
-    const { room, users, settings } = getRoom()
+  function resetGroup() {
+    const { room, groups, settings } = getRoom()
     const lives = settings.get("lives")
-    const updatedUsers = Array.from(users, ([key, value]) => {
-      return [
-        key,
-        {
-          ...value,
-          letters: new Set(),
-          lives,
-          text: "",
-          bonusLetters: new Set()
-        }
-      ]
-    })
-    room.set("users", new Map(updatedUsers))
+    const updatedGroup = Array.from(groups, ([key, value]) => [
+      key,
+      {
+        ...value,
+        letters: new Set(),
+        lives,
+        text: "",
+        bonusLetters: new Set()
+      }
+    ])
+    room.set("groups", new Map(updatedGroup))
   }
 
-  function checkIncrementRound(players) {
-    const { currentPlayer, startingPlayer, room } = getRoom()
+  function checkIncrementRound(groups) {
+    const { currentGroup, startingPlayer, room } = getRoom()
 
-    if (!players.find(([id, val]) => id === startingPlayer && val?.lives > 0)) {
-      room.set("startingPlayer", currentPlayer)
+    if (!groups.find(([id, val]) => id === startingPlayer && val?.lives > 0)) {
+      room.set("startingPlayer", currentGroup)
     }
-    if (currentPlayer === startingPlayer) {
-      if (players.length === 1) return incrementRound()
+    if (currentGroup === startingPlayer) {
+      if (groups.length === 1) return incrementRound()
       if (_firstRound) {
         _firstRound = false
       } else {
@@ -429,37 +510,37 @@ function connection(io, socket) {
   }
 
   function getNextPlayer(collection) {
-    const { currentPlayer } = getRoom()
-    const players = [...collection].filter(([, val]) => val.inGame)
+    const { currentGroup } = getRoom()
+    const groups = [...collection].filter(([, val]) => val.members.size)
 
-    checkIncrementRound(players)
+    checkIncrementRound(groups)
 
-    let currentIndex = players.findIndex(([key]) => key === currentPlayer)
-    if (currentIndex === players.length - 1) currentIndex = 0
+    let currentIndex = groups.findIndex(([key]) => key === currentGroup)
+    if (currentIndex === groups.length - 1) currentIndex = 0
 
-    let nextPlayerId
-    for (let i = currentIndex; i < players.length; i++) {
-      const player = players[i]
-      if (!player) continue
+    let nextGroupId
+    for (let i = currentIndex; i < groups.length; i++) {
+      const group = groups[i]
+      if (!group) continue
 
-      const [id, val] = player
-      if (val.lives <= 0 || id === currentPlayer) continue
-      nextPlayerId = id
+      const [id, val] = group
+      if (val.lives <= 0 || id === currentGroup) continue
+      nextGroupId = id
       break
     }
 
-    if (!nextPlayerId) {
-      const remainingPlayers = players.filter(([, val]) => val.lives > 0)
-      nextPlayerId = remainingPlayers[0][0]
+    if (!nextGroupId) {
+      const remainingGroups = groups.filter(([, val]) => val.lives > 0)
+      nextGroupId = remainingGroups[0][0]
     }
 
-    return nextPlayerId
+    return nextGroupId
   }
 
   function getRandomPlayer(collection) {
     const { room } = getRoom()
     const keys = Array.from(collection)
-      .filter(([, val]) => val.inGame)
+      .filter(([, val]) => val.members.size)
       .map(([id]) => id)
     const randomPlayer = getRandomElement(keys)
     room.set("startingPlayer", randomPlayer)
@@ -474,18 +555,16 @@ function connection(io, socket) {
     const props = {
       messages: setProp("messages", new Set()),
       users: setProp("users", new Map()),
+      groups: setProp("groups", new Map()),
       words: setProp("words", new Set()),
       letterBlend: setProp("letterBlend", ""),
       letterBlendWord: setProp("letterBlendWord", ""),
       letterBlendCounter: setProp("letterBlendCounter", 0),
-      timerConstructor: setProp(
-        "timerConstructor",
-        new Timer({ countdown: true })
-      ),
+      timerConstructor: setProp("timerConstructor", new Timer()),
       timer: setProp("timer", 0),
       round: setProp("round", 0),
       hardMode: setProp("hardMode", false),
-      currentPlayer: setProp("currentPlayer", ""),
+      currentGroup: setProp("currentGroup", ""),
       startingPlayer: setProp("startingPlayer", ""),
       running: setProp("running", false),
       winner: setProp("winner", null),
@@ -503,11 +582,9 @@ function connection(io, socket) {
     users.set(userId, {
       id: userId,
       name,
-      letters: new Set(),
       avatar: nanoid(),
       inGame: false,
-      score: 0,
-      bonusLetters: new Set()
+      group: ""
     })
   }
 
@@ -576,7 +653,7 @@ function connection(io, socket) {
 
   function checkNoUsers() {
     const { users } = getRoom()
-    if ([...users].filter(([, val]) => val.inGame) <= 0) {
+    if ([...users].filter(([, val]) => val.inGame).length <= 0) {
       stopGame()
       return true
     }
