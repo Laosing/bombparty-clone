@@ -1278,7 +1278,7 @@ function Winner({ winner }) {
                 <div
                   className="h4"
                   style={{
-                    fontSize: `calc(2em / ${winner.members.size * 0.7})`
+                    fontSize: winner.members.size === 1 ? "2em" : "1em"
                   }}
                   ref={refCallback}
                 >
