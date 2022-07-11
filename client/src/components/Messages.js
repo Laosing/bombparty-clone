@@ -41,13 +41,24 @@ function Messages() {
             .sort((a, b) => a.time - b.time)
             .map((message) => (
               <ListGroupItem key={message.id}>
-                <div className="d-flex justify-content-between small">
-                  <strong>{message.user.name}</strong>
-                  <small className="text-muted">
-                    {new Date(message.time).toLocaleTimeString()}
-                  </small>
-                </div>
-                <span className="text-secondary">{message.value}</span>
+                {message.user.name ? (
+                  <>
+                    <div className="d-flex justify-content-between small">
+                      <strong>{message.user.name}</strong>
+                      <small className="text-muted">
+                        {new Date(message.time).toLocaleTimeString()}
+                      </small>
+                    </div>
+                    <small className="text-secondary">{message.value}</small>
+                  </>
+                ) : (
+                  <div className="d-flex justify-content-between small">
+                    <span className="text-secondary">🚨 {message.value}</span>
+                    <small className="text-muted">
+                      {new Date(message.time).toLocaleTimeString()}
+                    </small>
+                  </div>
+                )}
               </ListGroupItem>
             ))}
         </ListGroup>
