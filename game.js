@@ -20,6 +20,10 @@ const LETTER_BONUS = 10
 
 const rooms = new Map()
 
+const admin = {
+  name: ""
+}
+
 function connection(io, socket) {
   let _firstRound = true
   let _roomId
@@ -41,7 +45,8 @@ function connection(io, socket) {
   socket.on("getRoom", relayRoom)
   socket.on("updateName", updateName)
   socket.on("updateAvatar", updateAvatar)
-  socket.on("message", handleMessage)
+  socket.on("message", handleUserMessage)
+  socket.on("getMessages", relayMessages)
   socket.on("disconnect", disconnect)
   socket.on("connect_error", (err) => {
     log.red(`connect_error due to ${err.message}`)
@@ -93,6 +98,7 @@ function connection(io, socket) {
 
     io.sockets.in(_roomId).emit("userJoined", userId)
     relayRoom()
+    createMessage(admin, `${user.name} joined the game`)
   }
 
   function initializeGroup(userId) {
@@ -154,7 +160,7 @@ function connection(io, socket) {
     })
   }
 
-  function leaveGame(userId) {
+  function leaveGame(userId, kickerId) {
     const { users } = getRoom()
     const user = users.get(userId)
     users.set(userId, { ...user, inGame: false })
@@ -164,6 +170,16 @@ function connection(io, socket) {
     checkNoUsers()
 
     relayRoom()
+
+    if (kickerId) {
+      const kickerUser = users.get(kickerId)
+      createMessage(
+        admin,
+        `${kickerUser.name} kicked ${user.name} from the game`
+      )
+    } else {
+      createMessage(admin, `${user.name} left the game`)
+    }
   }
 
   function setLetterBlend() {
@@ -192,11 +208,14 @@ function connection(io, socket) {
     const { users, messages, room } = getRoom()
     const player = users.get(userId)
     users.set(userId, { ...player, name: value })
-    const updateMessages = [...messages].map((m) => ({
-      ...m,
-      user: { ...m.user, name: m.user.id === userId ? value : m.user.name }
-    }))
-    room.set("messages", new Set(updateMessages))
+    if (messages.size) {
+      const updateMessages = [...messages].map((m) => ({
+        ...m,
+        user: { ...m.user, name: m.user.id === userId ? value : m.user.name }
+      }))
+      room.set("messages", new Set(updateMessages))
+      relayMessages()
+    }
     relayRoom()
   }
 
@@ -374,15 +393,18 @@ function connection(io, socket) {
     }
   }
 
-  function startGameClearCounter() {
-    const { room } = getRoom()
+  function startGameClearCounter(userId) {
+    const { room, users } = getRoom()
     clearInterval(room.get("_countDownInterval"))
     startGame()
     io.sockets.in(_roomId).emit("startCountDown", undefined)
+
+    const user = users.get(userId)
+    createMessage(admin, `${user.name} immediately started the game`)
   }
 
-  function startCountDown() {
-    const { room } = getRoom()
+  function startCountDown(userId) {
+    const { room, users } = getRoom()
 
     const interval = setInterval(countDownFn, 1000)
     const intervalId = interval[Symbol.toPrimitive]()
@@ -407,6 +429,9 @@ function connection(io, socket) {
 
     io.sockets.in(_roomId).emit("startCountDown", countDown)
     relayRoom()
+
+    const user = users.get(userId)
+    createMessage(admin, `${user.name} started the game`)
   }
 
   function startGame() {
@@ -454,8 +479,8 @@ function connection(io, socket) {
     return hasWinner
   }
 
-  function stopGame(group) {
-    const { room, timerConstructor } = getRoom()
+  function stopGame(group, userId) {
+    const { room, timerConstructor, users } = getRoom()
     timerConstructor.stop()
     timerConstructor.removeAllEventListeners()
     room
@@ -464,6 +489,11 @@ function connection(io, socket) {
       .set("currentGroup", "")
       .set("isCountDown", false)
     relayRoom()
+
+    if (userId) {
+      const user = users.get(userId)
+      createMessage(admin, `${user.name} stopped the game`)
+    }
   }
 
   function resetGroup() {
@@ -610,19 +640,27 @@ function connection(io, socket) {
     }
   }
 
-  function handleMessage(value) {
+  function handleUserMessage(value) {
     const { userId } = socket.handshake.auth
+    const { users } = getRoom()
+    createMessage(users.get(userId), value)
+  }
 
-    const { messages, users } = getRoom()
+  function createMessage(user, value) {
+    const { messages } = getRoom()
     const message = {
       id: nanoid(),
-      user: users.get(userId),
+      user,
       value,
       time: Date.now()
     }
-
     messages.add(message)
-    relayRoom()
+    relayMessages()
+  }
+
+  function relayMessages() {
+    const { messages } = getRoom()
+    io.sockets.in(_roomId).emit("messages", serialize(messages))
   }
 
   function removeUserFromRoom(userId) {

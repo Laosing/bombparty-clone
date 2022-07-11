@@ -1021,16 +1021,16 @@ function Game() {
   const toggleGame = () => {
     if (running) {
       log("STOP!")
-      socket.emit("stopGame")
+      socket.emit("stopGame", null, userId)
     } else {
       log("START!")
-      socket.emit("startGame")
+      socket.emit("startGame", userId)
     }
   }
 
   const joinGame = () => socket.emit("joinGame", userId, name)
   const leaveGame = () => socket.emit("leaveGame", userId)
-  const startGameNoCounter = () => socket.emit("startGameNoCounter")
+  const startGameNoCounter = () => socket.emit("startGameNoCounter", userId)
 
   useEffect(() => {
     if (running || isCountDown) {
@@ -1332,8 +1332,8 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
 
   const [value, setValue] = useState("")
   const deferredValue = useDeferredValue(value)
-  const textareaRef = React.useRef()
-  const cursorPos = React.useRef()
+  const ref = React.useRef()
+  const [cursor, setCursor] = useState(null)
 
   const validation = useWordValidation(500)
 
@@ -1349,11 +1349,12 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
     e.target.reset()
   }
 
-  const onChange = (value) => {
-    const val = value.toLowerCase()
+  const onChange = (e) => {
+    setCursor(e.target.selectionStart)
+
+    const val = e.target.value.toLowerCase()
     setValue(val)
     socket.emit("setGlobalInputText", val)
-    cursorPos.current = textareaRef.current.selectionStart
   }
 
   const color =
@@ -1384,8 +1385,10 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
   }, [socket])
 
   useEffect(() => {
-    textareaRef.current.setSelectionRange(cursorPos.current, cursorPos.current)
-  }, [deferredValue])
+    if (ref.current) {
+      ref.current.setSelectionRange(cursor, cursor)
+    }
+  }, [cursor, value])
 
   return (
     <>
@@ -1398,11 +1401,11 @@ function PlayerInput({ boomWord, boomLetterBlend }) {
           className={clsx(color)}
           key={iscurrentGroup}
           autoFocus
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           disabled={!iscurrentGroup}
           // {...(!iscurrentGroup && { value: deferredValue })}
-          value={deferredValue}
-          ref={textareaRef}
+          value={value}
+          ref={ref}
         />
         {deferredValue && (
           <Badge
@@ -1544,7 +1547,8 @@ function Players() {
       ? "text-success"
       : false
 
-  const kickPlayer = (userId) => socket.emit("kickPlayer", userId)
+  const kickPlayer = (kickedUserId) =>
+    socket.emit("kickPlayer", kickedUserId, userId)
   const highestScore = Math.max(...[...groups].map(([, val]) => val.score))
 
   const joinGroup = (groupId) => socket.emit("joinGroup", groupId, userId)

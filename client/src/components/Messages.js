@@ -1,6 +1,7 @@
-import React from "react"
-import { useRoom, useSocket } from "App"
+import React, { useEffect, useState } from "react"
+import { useSocket } from "App"
 import { Form, ListGroup, ListGroupItem } from "react-bootstrap"
+import { deserialize } from "functions/deserialize"
 
 export function MessagesWrapper() {
   return (
@@ -12,9 +13,19 @@ export function MessagesWrapper() {
 }
 
 function Messages() {
-  const { room } = useRoom()
-  const messages = room.get("messages")
+  const { socket } = useSocket()
   const ref = React.useRef()
+
+  const [messages, setMessages] = useState(new Set())
+
+  useEffect(() => {
+    const updateMessages = (val) => setMessages(deserialize(val))
+    socket.emit("getMessages")
+    socket.on("messages", updateMessages)
+    return () => {
+      socket.off("messages", updateMessages)
+    }
+  }, [socket])
 
   React.useEffect(() => {
     if (ref?.current) {
