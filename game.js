@@ -618,8 +618,8 @@ function connection(io, socket) {
     })
   }
 
-  function setSettings(data) {
-    const { settings } = getRoom()
+  function setSettings(data, userId) {
+    const { settings, users } = getRoom()
 
     const timer = data?.timer || settings.get("timer") || 10
     const lives = data?.lives || settings.get("lives") || 2
@@ -637,6 +637,9 @@ function connection(io, socket) {
     if (data) {
       io.sockets.in(_roomId).emit("setSettings", serialize(settings))
       relayRoom()
+
+      const user = users.get(userId)
+      createMessage(admin, `${user.name} changed the settings`)
     }
   }
 

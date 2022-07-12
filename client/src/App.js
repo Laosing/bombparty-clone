@@ -792,7 +792,7 @@ function GameSettings() {
     const hardMode = formData.get("hardMode")
     const hardModeEnabled = Boolean(formData.get("hardModeEnabled"))
     const data = { lives, timer, letterBlendCounter, hardMode, hardModeEnabled }
-    socket.emit("setSettings", data)
+    socket.emit("setSettings", data, userId)
   }
 
   const [notification, setNotification] = useState(false)
