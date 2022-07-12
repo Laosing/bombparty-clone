@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import { useSocket } from "App"
 import { Form, ListGroup, ListGroupItem } from "react-bootstrap"
 import { deserialize } from "functions/deserialize"
+import clsx from "clsx"
 
 export function MessagesWrapper() {
   return (
@@ -17,6 +18,7 @@ function Messages() {
   const ref = React.useRef()
 
   const [messages, setMessages] = useState(new Set())
+  const [notify, setNotify] = useState(false)
 
   useEffect(() => {
     const updateMessages = (val) => setMessages(deserialize(val))
@@ -31,6 +33,10 @@ function Messages() {
     if (ref?.current) {
       ref.current.scrollTop = ref.current.scrollHeight
     }
+    setNotify(true)
+    setTimeout(() => {
+      setNotify(false)
+    }, 300)
   }, [messages.size])
 
   return (
@@ -39,8 +45,17 @@ function Messages() {
         <ListGroup className="mt-auto">
           {[...messages]
             .sort((a, b) => a.time - b.time)
-            .map((message) => (
-              <ListGroupItem key={message.id}>
+            .map((message, index, array) => (
+              <ListGroupItem
+                key={message.id}
+                style={{
+                  transition: "box-shadow .3s ease",
+                  ...(notify &&
+                    index === array.length - 1 && {
+                      boxShadow: "inset 0 0 0 1px var(--bs-danger)"
+                    })
+                }}
+              >
                 {message.user.name ? (
                   <>
                     <div className="d-flex justify-content-between small">
