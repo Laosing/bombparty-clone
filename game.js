@@ -98,7 +98,7 @@ function connection(io, socket) {
 
     io.sockets.in(_roomId).emit("userJoined", userId)
     relayRoom()
-    createMessage(admin, `${user.name} joined the game`)
+    sendAdminMessage(userId, "joined the game")
   }
 
   function initializeGroup(userId) {
@@ -171,14 +171,14 @@ function connection(io, socket) {
 
     relayRoom()
 
-    if (kickerId) {
+    if (kickerId && user) {
       const kickerUser = users.get(kickerId)
       createMessage(
         admin,
         `${kickerUser.name} kicked ${user.name} from the game`
       )
     } else {
-      createMessage(admin, `${user.name} left the game`)
+      sendAdminMessage(userId, "left the game")
     }
   }
 
@@ -394,17 +394,16 @@ function connection(io, socket) {
   }
 
   function startGameClearCounter(userId) {
-    const { room, users } = getRoom()
+    const { room } = getRoom()
     clearInterval(room.get("_countDownInterval"))
     startGame()
     io.sockets.in(_roomId).emit("startCountDown", undefined)
 
-    const user = users.get(userId)
-    createMessage(admin, `${user.name} immediately started the game`)
+    sendAdminMessage(userId, "immediately started the game")
   }
 
   function startCountDown(userId) {
-    const { room, users } = getRoom()
+    const { room } = getRoom()
 
     const interval = setInterval(countDownFn, 1000)
     const intervalId = interval[Symbol.toPrimitive]()
@@ -430,8 +429,7 @@ function connection(io, socket) {
     io.sockets.in(_roomId).emit("startCountDown", countDown)
     relayRoom()
 
-    const user = users.get(userId)
-    createMessage(admin, `${user.name} started the game`)
+    sendAdminMessage(userId, "started the game")
   }
 
   function startGame() {
@@ -491,8 +489,7 @@ function connection(io, socket) {
     relayRoom()
 
     if (userId) {
-      const user = users.get(userId)
-      createMessage(admin, `${user.name} stopped the game`)
+      sendAdminMessage(userId, "stopped the game")
     }
   }
 
@@ -619,7 +616,7 @@ function connection(io, socket) {
   }
 
   function setSettings(data, userId) {
-    const { settings, users } = getRoom()
+    const { settings } = getRoom()
 
     const timer = data?.timer || settings.get("timer") || 10
     const lives = data?.lives || settings.get("lives") || 2
@@ -638,8 +635,15 @@ function connection(io, socket) {
       io.sockets.in(_roomId).emit("setSettings", serialize(settings))
       relayRoom()
 
-      const user = users.get(userId)
-      createMessage(admin, `${user.name} changed the settings`)
+      sendAdminMessage(userId, "changed the settings")
+    }
+  }
+
+  function sendAdminMessage(userId, message) {
+    const { users } = getRoom()
+    const user = users.get(userId)
+    if (user) {
+      createMessage(admin, `${user.name} ${message}`)
     }
   }
 

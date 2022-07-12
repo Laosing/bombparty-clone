@@ -60,7 +60,7 @@ function Messages() {
                   <>
                     <div className="d-flex justify-content-between small">
                       <strong>{message.user.name}</strong>
-                      <small className="text-muted">
+                      <small className="text-muted flex-shrink-0">
                         {new Date(message.time).toLocaleTimeString()}
                       </small>
                     </div>
@@ -69,7 +69,7 @@ function Messages() {
                 ) : (
                   <div className="d-flex justify-content-between small">
                     <span className="text-secondary">🚨 {message.value}</span>
-                    <small className="text-muted">
+                    <small className="text-muted flex-shrink-0">
                       {new Date(message.time).toLocaleTimeString()}
                     </small>
                   </div>
