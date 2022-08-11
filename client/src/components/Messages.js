@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react"
 import { useSocket } from "App"
 import { Form, ListGroup, ListGroupItem } from "react-bootstrap"
 import { deserialize } from "functions/deserialize"
-import clsx from "clsx"
 
 export function MessagesWrapper() {
   return (
@@ -29,7 +28,7 @@ function Messages() {
     }
   }, [socket])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (ref?.current) {
       ref.current.scrollTop = ref.current.scrollHeight
     }

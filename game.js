@@ -366,7 +366,8 @@ function connection(io, socket) {
     } = getRoom()
     const wordDetails =
       letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : ["", ""]
-    io.sockets.in(_roomId).emit("boom", [currentGroup, ...wordDetails])
+    io.sockets.in(_roomId).emit("boom", currentGroup)
+    io.sockets.in(_roomId).emit("boomWord", wordDetails)
     loseLife()
     const hasWinner = checkGameState()
     if (!hasWinner) {
@@ -403,7 +404,9 @@ function connection(io, socket) {
   }
 
   function startCountDown(userId) {
-    const { room } = getRoom()
+    const { room, running } = getRoom()
+
+    if (running) return
 
     const interval = setInterval(countDownFn, 1000)
     const intervalId = interval[Symbol.toPrimitive]()
