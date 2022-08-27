@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
-import { useSocket } from "App"
 import { Form, ListGroup, ListGroupItem } from "react-bootstrap"
 import { deserialize } from "functions/deserialize"
+import { useSocket } from "hooks/useSocket"
 
 export function MessagesWrapper() {
   return (

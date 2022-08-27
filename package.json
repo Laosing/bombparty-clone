@@ -4,6 +4,7 @@
   "private": true,
   "main": "index.js",
   "type": "module",
+  "license": "MIT",
   "scripts": {
     "dev": "concurrently 'nodemon index.js' 'cd client && yarn && yarn start'",
     "start": "node index.js",
