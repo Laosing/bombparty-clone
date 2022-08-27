@@ -62,6 +62,7 @@ export function Winner({ winner }) {
                     fontSize: winner.members.size === 1 ? "2em" : "1em"
                   }}
                   ref={refCallback}
+                  data-testid="winner-name"
                 >
                   {users.get(user).name}
                 </div>
@@ -73,7 +74,11 @@ export function Winner({ winner }) {
         {roomLetterBlendWord && (
           <div className="mb-4">
             <strong>Last word:</strong>{" "}
-            <Badge bg="secondary" style={{ fontSize: "1em" }}>
+            <Badge
+              data-testid="last-word"
+              bg="secondary"
+              style={{ fontSize: "1em" }}
+            >
               <Highlight
                 searchWords={[roomLetterBlend?.toUpperCase()]}
                 textToHighlight={roomLetterBlendWord?.toUpperCase()}

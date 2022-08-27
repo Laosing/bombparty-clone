@@ -37,13 +37,11 @@ export function AudioSettings() {
     <Form className="p-3">
       <Row>
         <Col>
-          <Form.Check
-            type="switch"
-            id="settingsMusic"
-            checked={!!music}
-            onChange={toggleMusic}
-            label={<MusicLabel toggleMusicVersion={toggleMusicVersion} />}
-          />
+          <Form.Check type="switch" id="settingsMusic">
+            <Form.Check.Input checked={!!music} onChange={toggleMusic} />
+            <Form.Check.Label>Music</Form.Check.Label>
+            <MusicLabel toggleMusicVersion={toggleMusicVersion} />
+          </Form.Check>
           <Form.Check
             type="switch"
             id="settingsSoundEffects"

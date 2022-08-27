@@ -8,4 +8,11 @@
  */
 import { setImmediate } from "timers"
 import "@testing-library/jest-dom"
+
 global.setImmediate = setImmediate
+
+window.HTMLCanvasElement.prototype.getContext = () => {
+  return {
+    clearRect: () => {}
+  }
+}

@@ -62,5 +62,8 @@
     "moduleNameMapper": {
       "\\.(css)$": "<rootDir>/src/tests/styleMock.js"
     }
+  },
+  "devDependencies": {
+    "socket.io-mock": "^1.3.2"
   }
 }
