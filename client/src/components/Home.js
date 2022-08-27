@@ -38,9 +38,12 @@ export const Home = () => {
         className="d-flex gap-2 justify-content-center mb-5"
       />
       <Form onSubmit={onSubmit} className="mb-5">
-        <Form.Label>Know an existing room? Enter it here!</Form.Label>
+        <Form.Label htmlFor="existing-room">
+          Know an existing room? Enter it here!
+        </Form.Label>
         <InputGroup className="w-auto justify-content-center">
           <FormControl
+            id="existing-room"
             className="text-uppercase"
             name="room"
             style={{ maxWidth: "120px" }}
