@@ -15,6 +15,7 @@ import { AvatarSettings } from "components/AvatarSettings"
 import { Layout } from "components/Layout"
 import { AudioSettings } from "components/AudioSettings"
 import { GameSettings } from "components/GameSettings"
+import { GithubLink } from "./GithubLink"
 
 export function Room() {
   const { socket } = useSocket()
@@ -47,13 +48,14 @@ export function Room() {
           <Button
             variant="link"
             onClick={resetClient}
-            className="position-absolute top-0 end-0 text-decoration-none border border-top-0 border-end-0"
+            className="position-absolute top-0 end-0 text-decoration-none border-0"
           >
             ☠️
           </Button>
         )}
         <Row className="flex-grow-1">
-          <Col md={8}>
+          <Col md={8} className="position-relative">
+            <GithubLink />
             <Layout className="p-0">
               <Game />
             </Layout>

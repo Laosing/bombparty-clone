@@ -27,6 +27,7 @@ export function Players() {
   const groups = room.get("groups")
   const running = room.get("running")
   const currentGroup = room.get("currentGroup")
+  const isCountDown = room.get("isCountDown")
 
   const isAdmin = useGameStore((state) => state.isAdmin)
 
@@ -100,6 +101,8 @@ export function Players() {
           return (
             <ListGroup key={groupId} className="mb-3">
               {[...group.members].map((memberId, index) => {
+                const isActiveTyper =
+                  group.activeTyper % group.members.size === index
                 const member = players.get(memberId)
                 const onlyRowOne = index === 0
                 return (
@@ -113,7 +116,11 @@ export function Players() {
                       running &&
                         group.lives <= 0 &&
                         "list-group-item-secondary text-decoration-line-through",
-                      groupId === currentGroup && "list-group-item-primary"
+                      groupId === currentGroup && "list-group-item-primary",
+                      groupId === currentGroup &&
+                        isActiveTyper &&
+                        running &&
+                        "activeTyper"
                     )}
                   >
                     <span
@@ -173,6 +180,7 @@ export function Players() {
                         </span>
                       )}
                       {member.name}
+                      {isActiveTyper && running && " ✏️"}
                     </span>
 
                     {running && onlyRowOne && (
@@ -211,6 +219,7 @@ export function Players() {
                     )}
 
                     {isInGroup(groupId) &&
+                      !isCountDown &&
                       !running &&
                       onlyRowOne &&
                       user.inGame && (
@@ -225,6 +234,7 @@ export function Players() {
                       )}
 
                     {!isInGroup(groupId) &&
+                      !isCountDown &&
                       group.members.size > 1 &&
                       !running &&
                       onlyRowOne &&

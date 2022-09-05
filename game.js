@@ -110,7 +110,8 @@ function connection(io, socket) {
       letters: new Set(),
       score: 0,
       bonusLetters: new Set(),
-      members: new Set([userId])
+      members: new Set([userId]),
+      activeTyper: 0
     })
 
     const user = users.get(userId)
@@ -506,7 +507,8 @@ function connection(io, socket) {
         letters: new Set(),
         lives,
         text: "",
-        bonusLetters: new Set()
+        bonusLetters: new Set(),
+        activeTyper: 0
       }
     ])
     room.set("groups", new Map(updatedGroup))
@@ -539,10 +541,20 @@ function connection(io, socket) {
     room.set("round", newRound)
   }
 
+  function incrementActiveTyper() {
+    const { groups, currentGroup } = getRoom()
+    const group = groups.get(currentGroup)
+    if (group) {
+      const activeTyper = group.activeTyper + 1
+      groups.set(currentGroup, { ...group, activeTyper })
+    }
+  }
+
   function getNextPlayer(collection) {
     const { currentGroup } = getRoom()
     const groups = [...collection].filter(([, val]) => val.members.size)
 
+    incrementActiveTyper()
     checkIncrementRound(groups)
 
     let currentIndex = groups.findIndex(([key]) => key === currentGroup)

@@ -12,8 +12,6 @@ export function PlayerInput() {
 
   const [value, setValue] = useState("")
   const deferredValue = useDeferredValue(value)
-  const ref = React.useRef()
-  const [cursor, setCursor] = useState(null)
 
   const validation = useWordValidation(500)
 
@@ -21,7 +19,11 @@ export function PlayerInput() {
 
   const currentGroup = room.get("currentGroup")
   const groups = room.get("groups")
-  const iscurrentGroup = groups.get(currentGroup)?.members?.has?.(userId)
+
+  const group = groups.get(currentGroup)
+  const isCurrentGroup = group?.members?.has?.(userId)
+  const index = [...group?.members].findIndex((id) => id === userId)
+  const isActiveTyper = group.activeTyper % group?.members?.size === index
 
   const submitForm = (e) => {
     e.preventDefault()
@@ -30,8 +32,6 @@ export function PlayerInput() {
   }
 
   const onChange = (e) => {
-    setCursor(e.target.selectionStart)
-
     const val = e.target.value.toLowerCase()
     setValue(val)
     socket.emit("setGlobalInputText", val)
@@ -55,7 +55,8 @@ export function PlayerInput() {
 
   useEffect(() => {
     setValue("")
-  }, [currentGroup])
+    socket.emit("setGlobalInputText", "")
+  }, [currentGroup, isActiveTyper, socket])
 
   useEffect(() => {
     socket.on("setGlobalInputText", setValue)
@@ -64,11 +65,11 @@ export function PlayerInput() {
     }
   }, [socket])
 
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.setSelectionRange(cursor, cursor)
-    }
-  }, [cursor, value])
+  const inputProps = {
+    disabled: !isCurrentGroup || !isActiveTyper,
+    ...((!isCurrentGroup || !isActiveTyper) && { value: deferredValue }),
+    ...(isCurrentGroup && isActiveTyper && { onChange: onChange })
+  }
 
   return (
     <>
@@ -79,13 +80,9 @@ export function PlayerInput() {
       >
         <Form.Control
           className={clsx(color)}
-          key={iscurrentGroup}
+          key={`${currentGroup}_${isActiveTyper}`}
           autoFocus
-          onChange={onChange}
-          disabled={!iscurrentGroup}
-          // {...(!iscurrentGroup && { value: deferredValue })}
-          value={value}
-          ref={ref}
+          {...inputProps}
         />
         {deferredValue && (
           <Badge
