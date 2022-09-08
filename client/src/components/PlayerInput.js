@@ -22,8 +22,8 @@ export function PlayerInput() {
 
   const group = groups.get(currentGroup)
   const isCurrentGroup = group?.members?.has?.(userId)
-  const index = [...group?.members].findIndex((id) => id === userId)
-  const isActiveTyper = group.activeTyper % group?.members?.size === index
+  const index = [...(group?.members || [])].findIndex((id) => id === userId)
+  const isActiveTyper = group?.activeTyper % group?.members?.size === index
 
   const submitForm = (e) => {
     e.preventDefault()
