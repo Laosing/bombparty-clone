@@ -333,7 +333,7 @@ function connection(io, socket) {
     if (hardModeEnabled && hardMode && settingsTimer > 1) {
       const num = getRandomInt(0, Math.ceil(settingsTimer / 2))
       const seconds = settingsTimer - num
-      timerConstructor.start(seconds)
+      timerConstructor.setTimer(seconds)
       room.set("timer", seconds)
     } else {
       room.set("timer", settingsTimer)
@@ -482,7 +482,7 @@ function connection(io, socket) {
   }
 
   function stopGame(group, userId) {
-    const { room, timerConstructor, users } = getRoom()
+    const { room, timerConstructor } = getRoom()
     timerConstructor.stop()
     timerConstructor.removeAllEventListeners()
     room

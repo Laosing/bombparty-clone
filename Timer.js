@@ -6,9 +6,9 @@ export function Timer() {
   let _events = new Map()
 
   function start(time) {
+    stop()
     if (time) {
       setTimer(time)
-      stop()
     }
     if (_timer === _defaultTimer && _events.get("secondsUpdated")) {
       _events.get("secondsUpdated")()
