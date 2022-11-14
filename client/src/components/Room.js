@@ -15,7 +15,8 @@ import { AvatarSettings } from "components/AvatarSettings"
 import { Layout } from "components/Layout"
 import { AudioSettings } from "components/AudioSettings"
 import { GameSettings } from "components/GameSettings"
-import { GithubLink } from "./GithubLink"
+import { GithubLink } from "components/GithubLink"
+import { reset } from "functions/reset"
 
 export function Room() {
   const { socket } = useSocket()
@@ -27,12 +28,6 @@ export function Room() {
   const resetClient = () => socket.emit("resetClient")
 
   useEffect(() => {
-    const reset = () => {
-      localStorage.removeItem("sound-settings")
-      localStorage.removeItem("game-settings")
-      window.location.reload()
-    }
-
     socket.on("resetClient", reset)
     return () => {
       socket.off("resetClient", reset)

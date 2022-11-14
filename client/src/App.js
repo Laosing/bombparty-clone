@@ -11,12 +11,15 @@ import { useGameStore } from "hooks/useStore"
 import { Home } from "components/Home"
 import { ValidateRoom } from "components/ValidateRoom"
 import { InitializeSocket } from "components/InitializeSocket"
+import { ErrorBoundaryWrapper } from "components/ErrorFallback"
 
 function App() {
   return (
-    <InitializeSocket>
-      <Outlet />
-    </InitializeSocket>
+    <ErrorBoundaryWrapper>
+      <InitializeSocket>
+        <Outlet />
+      </InitializeSocket>
+    </ErrorBoundaryWrapper>
   )
 }
 

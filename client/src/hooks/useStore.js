@@ -3,6 +3,9 @@ import create from "zustand"
 import { persist } from "zustand/middleware"
 import { getRandomName } from "functions/session"
 
+export const SOUND_SETTINGS = "sound-settings"
+export const GAME_SETTINGS = "game-settings"
+
 export const useSoundStore = create(
   persist(
     (set, get) => ({
@@ -16,7 +19,7 @@ export const useSoundStore = create(
       volume: 0.25,
       setVolume: (val) => set({ volume: val })
     }),
-    { name: "sound-settings" }
+    { name: SOUND_SETTINGS }
   )
 )
 
@@ -32,6 +35,6 @@ export const useGameStore = create(
       isAdmin: false,
       setIsAdmin: () => set({ isAdmin: !get().isAdmin })
     }),
-    { name: "game-settings" }
+    { name: GAME_SETTINGS }
   )
 )

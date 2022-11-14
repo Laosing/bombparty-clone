@@ -18,7 +18,7 @@ export const GithubLink = () => {
 const LinkTooltip = () => {
   const renderTooltip = (props) => (
     <Tooltip id="link-tooltip" {...props}>
-      Check out the github!
+      Check it out on github!
     </Tooltip>
   )
   return (

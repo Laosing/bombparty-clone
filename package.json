@@ -9,7 +9,7 @@
     "dev": "concurrently 'nodemon index.js' 'cd client && yarn && yarn start'",
     "start": "node index.js",
     "build": "cd client && yarn && yarn build",
-    "deploy": "fly deploy --remote-only --no-cache",
+    "deploy": "fly deploy --remote-only",
     "test": "cd client && yarn test"
   },
   "dependencies": {
