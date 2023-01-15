@@ -3,16 +3,21 @@ import { Button } from "react-bootstrap"
 import { Avatar } from "components/Avatar"
 import { useRoom } from "hooks/useRoom"
 import { useSocket } from "hooks/useSocket"
+import { useGameStore } from "hooks/useStore"
+import { nanoid } from "nanoid"
 
 export function AvatarSettings() {
   const { socket, userId } = useSocket()
   const { room } = useRoom()
+  const setAvatarSeed = useGameStore((state) => state.setAvatarSeed)
 
   const users = room.get("users")
   const currentGroup = users.get(userId)
 
   const editAvatar = () => {
-    socket.emit("updateAvatar", userId)
+    const newSeed = nanoid()
+    setAvatarSeed(newSeed)
+    socket.emit("updateAvatar", userId, newSeed)
   }
 
   return (

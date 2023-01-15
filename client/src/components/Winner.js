@@ -24,11 +24,11 @@ export function Winner({ winner }) {
         disableForReducedMotion: true,
         origin: {
           x: (rect.left + rect.width / 2) / window.innerWidth,
-          y: (rect.top + rect.height / 2) / window.innerHeight
+          y: (rect.top + rect.height / 2) / window.innerHeight,
         },
         particleCount: 50,
         startVelocity: 30,
-        spread: 270
+        spread: 270,
       })
     }
     ref.current = node
@@ -59,9 +59,8 @@ export function Winner({ winner }) {
                 <div
                   className="h4"
                   style={{
-                    fontSize: winner.members.size === 1 ? "2em" : "1em"
+                    fontSize: winner.members.size === 1 ? "2em" : "1em",
                   }}
-                  ref={refCallback}
                   data-testid="winner-name"
                 >
                   {users.get(user).name}

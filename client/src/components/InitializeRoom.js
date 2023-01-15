@@ -14,18 +14,21 @@ export function InitializeRoom() {
   const { roomId } = useParams()
   const [room, setRoom] = useState()
   const name = useGameStore((state) => state.name)
+  const avatarSeed = useGameStore((state) => state.avatarSeed)
+
   const location = useLocation()
   const isPrivate = location.state?.isPrivate
 
   useEffect(() => {
     const getRoom = (val) => setRoom(deserialize(val))
 
-    socket.emit("joinRoom", roomId, isPrivate, name)
+    socket.emit("joinRoom", roomId, isPrivate, name, avatarSeed)
     socket.on("getRoom", getRoom)
     return () => {
       socket.off("getRoom", getRoom)
     }
-  }, [isPrivate, name, roomId, socket])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isLoadingStuck = !room || !room.get("users").has(userId)
   useInterval(

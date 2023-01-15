@@ -1,6 +1,6 @@
 import React from "react"
 import { Button } from "react-bootstrap"
-import shallow from "zustand/shallow"
+import { shallow } from "zustand/shallow"
 import { getRandomName } from "functions/session"
 import { useGameStore } from "hooks/useStore"
 import { useSocket } from "hooks/useSocket"

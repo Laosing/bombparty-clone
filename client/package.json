@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@dicebear/avatars": "^4.10.3",
-    "@dicebear/big-smile": "^4.10.3",
+    "@dicebear/collection": "^5.0.4",
+    "@dicebear/core": "^5.0.4",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^14.4.3",

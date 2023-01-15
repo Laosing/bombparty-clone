@@ -46,7 +46,7 @@ export function Game() {
     "music",
     {
       loop: true,
-      autoplay: true
+      autoplay: true,
     }
   )
 
@@ -123,7 +123,7 @@ export function Game() {
                   transform: "translate(0, -70%)",
                   fontSize: "0.8em",
                   letterSpacing: ".1em",
-                  fontWeight: "700"
+                  fontWeight: "700",
                 }}
               >
                 <Highlight
@@ -148,7 +148,7 @@ export function Game() {
                   fontSize: "1.2em",
                   transform: `translate(${
                     String(timer).length > 1 ? "-20%" : "-40%"
-                  }, 20%)`
+                  }, 20%)`,
                 }}
               >
                 {timer}
@@ -159,7 +159,7 @@ export function Game() {
                     "animate__animated animate__infinite animate__pulse w-100"
                   )}
                   style={{
-                    fill: hardMode ? "var(--bs-danger)" : "initial"
+                    fill: hardMode ? "var(--bs-danger)" : "initial",
                   }}
                 />
               </div>

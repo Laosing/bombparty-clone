@@ -1,12 +1,9 @@
 import React from "react"
-import { createAvatar } from "@dicebear/avatars"
-import * as avatarStyle from "@dicebear/big-smile"
+import { createAvatar } from "@dicebear/core"
+import { bigSmile } from "@dicebear/collection"
 
 export const Avatar = ({ id, ...props }) => {
-  const avatar = React.useMemo(
-    () => createAvatar(avatarStyle, { seed: id }),
-    [id]
-  )
+  const avatar = React.useMemo(() => createAvatar(bigSmile, { seed: id }), [id])
 
   return (
     <img

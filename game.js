@@ -21,7 +21,7 @@ const LETTER_BONUS = 10
 const rooms = new Map()
 
 const admin = {
-  name: ""
+  name: "",
 }
 
 function connection(io, socket) {
@@ -53,12 +53,12 @@ function connection(io, socket) {
   })
   socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
 
-  function joinRoom(roomId, isPrivate, name) {
+  function joinRoom(roomId, isPrivate, name, avatarSeed) {
     _roomId = roomId
 
     initializeRoom()
     getRoom(isPrivate)
-    initializeUser(name)
+    initializeUser(name, avatarSeed)
     setSettings()
 
     socket.join(_roomId)
@@ -82,8 +82,8 @@ function connection(io, socket) {
       room,
       {
         players,
-        isPrivate: Boolean(rooms.get(room).get("private"))
-      }
+        isPrivate: Boolean(rooms.get(room).get("private")),
+      },
     ])
     // console.dir(io.sockets.adapter.rooms)
     io.emit("getRooms", serialize(roomsWithPrivate))
@@ -111,7 +111,7 @@ function connection(io, socket) {
       score: 0,
       bonusLetters: new Set(),
       members: new Set([userId]),
-      activeTyper: 0
+      activeTyper: 0,
     })
 
     const user = users.get(userId)
@@ -128,7 +128,7 @@ function connection(io, socket) {
     if (groupId) {
       groups.set(groupId, {
         ...group,
-        members: new Set([memberId, ...group.members])
+        members: new Set([memberId, ...group.members]),
       })
       users.set(memberId, { ...user, group: groupId })
     } else {
@@ -212,7 +212,7 @@ function connection(io, socket) {
     if (messages.size) {
       const updateMessages = [...messages].map((m) => ({
         ...m,
-        user: { ...m.user, name: m.user.id === userId ? value : m.user.name }
+        user: { ...m.user, name: m.user.id === userId ? value : m.user.name },
       }))
       room.set("messages", new Set(updateMessages))
       relayMessages()
@@ -220,10 +220,10 @@ function connection(io, socket) {
     relayRoom()
   }
 
-  function updateAvatar(userId) {
+  function updateAvatar(userId, newSeed) {
     const { users } = getRoom()
     const player = users.get(userId)
-    users.set(userId, { ...player, avatar: nanoid() })
+    users.set(userId, { ...player, avatar: newSeed })
     relayRoom()
   }
 
@@ -240,14 +240,14 @@ function connection(io, socket) {
         ...group,
         lives: Number(group.lives) >= 10 ? 10 : Number(group.lives) + 1,
         letters: new Set(),
-        bonusLetters: new Set()
+        bonusLetters: new Set(),
       })
       io.sockets.in(_roomId).emit("gainedHeart", groupId)
     } else {
       groups.set(groupId, {
         ...group,
         letters: newLetters,
-        bonusLetters: new Set([...group.bonusLetters, ...bonusletter])
+        bonusLetters: new Set([...group.bonusLetters, ...bonusletter]),
       })
     }
   }
@@ -292,7 +292,7 @@ function connection(io, socket) {
         isDictionary,
         isUnique,
         isLongEnough,
-        currentGroup
+        currentGroup,
       })
       setGroupText(groupId, "")
     }
@@ -363,7 +363,7 @@ function connection(io, socket) {
       currentGroup,
       letterBlend,
       letterBlendWord,
-      letterBlendCounter
+      letterBlendCounter,
     } = getRoom()
     const wordDetails =
       letterBlendCounter <= 1 ? [letterBlend, letterBlendWord] : ["", ""]
@@ -508,8 +508,8 @@ function connection(io, socket) {
         lives,
         text: "",
         bonusLetters: new Set(),
-        activeTyper: 0
-      }
+        activeTyper: 0,
+      },
     ])
     room.set("groups", new Map(updatedGroup))
   }
@@ -612,21 +612,21 @@ function connection(io, socket) {
       winner: setProp("winner", null),
       settings: setProp("settings", new Map()),
       private: setProp("private", Boolean(isPrivate)),
-      isCountDown: setProp("isCountDown", false)
+      isCountDown: setProp("isCountDown", false),
     }
 
     return { room, ...props }
   }
 
-  function initializeUser(name) {
+  function initializeUser(name, avatarSeed) {
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
     users.set(userId, {
       id: userId,
       name,
-      avatar: nanoid(),
+      avatar: avatarSeed,
       inGame: false,
-      group: ""
+      group: "",
     })
   }
 
@@ -674,7 +674,7 @@ function connection(io, socket) {
       id: nanoid(),
       user,
       value,
-      time: Date.now()
+      time: Date.now(),
     }
     messages.add(message)
     relayMessages()

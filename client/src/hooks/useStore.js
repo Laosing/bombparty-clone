@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid"
-import create from "zustand"
+import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { getRandomName } from "functions/session"
 
@@ -17,7 +17,7 @@ export const useSoundStore = create(
       soundEffects: true,
       toggleSoundEffects: () => set({ soundEffects: !get().soundEffects }),
       volume: 0.25,
-      setVolume: (val) => set({ volume: val })
+      setVolume: (val) => set({ volume: val }),
     }),
     { name: SOUND_SETTINGS }
   )
@@ -29,11 +29,13 @@ export const useGameStore = create(
       name: getRandomName(),
       setName: (name) => set({ name }),
       userId: nanoid(),
+      avatarSeed: nanoid(),
+      setAvatarSeed: (seed) => set({ avatarSeed: seed }),
       theme: "light",
       switchTheme: () =>
         set({ theme: get().theme === "light" ? "dark" : "light" }),
       isAdmin: false,
-      setIsAdmin: () => set({ isAdmin: !get().isAdmin })
+      setIsAdmin: () => set({ isAdmin: !get().isAdmin }),
     }),
     { name: GAME_SETTINGS }
   )

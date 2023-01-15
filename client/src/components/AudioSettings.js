@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
 import { Form, Row, Col } from "react-bootstrap"
-import shallow from "zustand/shallow"
+import { shallow } from "zustand/shallow"
 import { Howler } from "howler"
 import { useGameStore, useSoundStore } from "hooks/useStore"
 import { MusicLabel } from "components/MusicLabel"
@@ -12,7 +12,7 @@ export function AudioSettings() {
     soundEffects,
     toggleSoundEffects,
     volume,
-    setVolume
+    setVolume,
   ] = useSoundStore(
     (store) => [
       store.music,
@@ -20,7 +20,7 @@ export function AudioSettings() {
       store.soundEffects,
       store.toggleSoundEffects,
       store.volume,
-      store.setVolume
+      store.setVolume,
     ],
     shallow
   )
