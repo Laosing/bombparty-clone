@@ -1,14 +1,40 @@
 import { nanoid } from "nanoid"
 import serialize from "serialize-javascript"
 import { Timer } from "./Timer.js"
-import { readFileSync } from "fs"
 import { getRandomLettersFn } from "./data/randomLetters.js"
 import { log } from "./index.js"
+import Database from "better-sqlite3"
 
-// import dictionary from "./data/wordlist.json" assert { type: "json" }
-const dictionary = JSON.parse(readFileSync("./data/wordlist.json"))
+class Dictionary {
+  constructor() {
+    this.db = new Database("dictionary.db", { readonly: true })
+    this.db.pragma("journal_mode = WAL")
+  }
 
-const getRandomLetters = getRandomLettersFn(Object.keys(dictionary))
+  getRandomWord() {
+    const stmt = this.db
+      .prepare(
+        "SELECT * FROM English WHERE ROWID > (ABS(RANDOM()) % (SELECT max(ROWID) FROM English)) LIMIT 1;"
+      )
+      .get()
+    return stmt.word
+  }
+
+  checkWord(word) {
+    const stmt = this.db
+      .prepare("SELECT * FROM English WHERE word = ?")
+      .get(word)
+    return Boolean(stmt?.word)
+  }
+}
+
+const dictionary = new Dictionary()
+
+// const random = _dictionary.getRandomWord()
+// const word = _dictionary.checkWord("hello")
+// const word2 = _dictionary.checkWord("hellofasdfsadf")
+
+// const getRandomLetters = getRandomLettersFn(Object.keys(dictionary))
 
 const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
@@ -185,7 +211,8 @@ function connection(io, socket) {
 
   function setLetterBlend() {
     const { room } = getRoom()
-    const [letters, word] = getRandomLetters()
+    const randomWord = dictionary.getRandomWord()
+    const [letters, word] = getRandomLettersFn(randomWord)()
     log.magenta("word", word)
     room.set("letterBlend", letters)
     room.set("letterBlendWord", word)
@@ -268,7 +295,7 @@ function connection(io, socket) {
   function checkWord(value, groupId) {
     const { letterBlend, words, currentGroup, timerConstructor } = getRoom()
     const isBlend = value.includes(letterBlend.toLowerCase())
-    const isDictionary = !!dictionary[value]
+    const isDictionary = dictionary.checkWord(value)
     const isUnique = !words.has(value)
     const isLongEnough = value.length >= 3
     const isCurrentGroup = currentGroup === groupId

@@ -49,9 +49,8 @@ function randomLetters(items, chance = 0.7) {
 
 // console.log(dupes, dupes.length)
 
-function getRandomLettersFn(dictionary) {
+function getRandomLettersFn(word) {
   return (chance) => {
-    const word = random(dictionary)
     return [randomLetters(word, chance), word]
   }
 }
