@@ -12,14 +12,51 @@ import { Home } from "components/Home"
 import { ValidateRoom } from "components/ValidateRoom"
 import { InitializeSocket } from "components/InitializeSocket"
 import { ErrorBoundaryWrapper } from "components/ErrorFallback"
+import { Turnstile } from "@marsidev/react-turnstile"
+import { isDevEnv } from "functions/session"
 
 function App() {
   return (
-    <ErrorBoundaryWrapper>
-      <InitializeSocket>
-        <Outlet />
-      </InitializeSocket>
-    </ErrorBoundaryWrapper>
+    <Captcha>
+      <ErrorBoundaryWrapper>
+        <InitializeSocket>
+          <Outlet />
+        </InitializeSocket>
+      </ErrorBoundaryWrapper>
+    </Captcha>
+  )
+}
+
+function Captcha({ children }) {
+  const ref = React.useRef()
+  const [status, setStatus] = React.useState()
+
+  if (status === "solved") {
+    return <>{children}</>
+  }
+
+  if (status === "error") {
+    return (
+      <div className="d-flex justify-content-center align-items-center h-100">
+        <div className="text-center">
+          <h1>Error</h1>
+          <p>Something went wrong, please try again.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="d-flex justify-content-center align-items-center h-100">
+      <Turnstile
+        ref={ref}
+        onSuccess={() => setStatus("solved")}
+        onError={() => setStatus("error")}
+        siteKey={
+          isDevEnv ? "1x00000000000000000000AA" : process.env.REACT_APP_turntile
+        }
+      />
+    </div>
   )
 }
 
@@ -34,9 +71,18 @@ const Router = () => {
         style={{ width: "100%", maxWidth: "600px" }}
       />
       <Routes>
-        <Route path="/" element={<App />}>
-          <Route index element={<Home />} />
-          <Route path=":roomId" element={<ValidateRoom />}></Route>
+        <Route
+          path="/"
+          element={<App />}
+        >
+          <Route
+            index
+            element={<Home />}
+          />
+          <Route
+            path=":roomId"
+            element={<ValidateRoom />}
+          ></Route>
         </Route>
       </Routes>
     </BrowserRouter>
