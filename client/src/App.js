@@ -53,7 +53,7 @@ function Captcha({ children }) {
         onSuccess={() => setStatus("solved")}
         onError={() => setStatus("error")}
         siteKey={
-          isDevEnv ? "1x00000000000000000000AA" : process.env.REACT_APP_turntile
+          isDevEnv ? "1x00000000000000000000AA" : "0x4AAAAAABYeXvkUzwifs3U4"
         }
       />
     </div>

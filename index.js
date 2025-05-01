@@ -2,10 +2,13 @@
 
 import { Server } from "socket.io"
 import http from "http"
-import ansi from "ansi-colors"
 
 import { app } from "./app.js"
 import game from "./game.js"
+
+import pino from "pino"
+
+const logger = pino()
 
 const port = normalizePort(process.env.PORT || "8080")
 app.set("port", port)
@@ -16,20 +19,13 @@ const io = new Server(httpServer, {
   maxHttpBufferSize: 1e8,
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 })
 game(io)
 
-const log = console.log
-const colors = ["red", "blue", "yellow", "green", "magenta"]
-colors.forEach(
-  (color) =>
-    (log[color] = (...msg) => log(ansi[color](`${[...msg].join(" : ")}`)))
-)
-
 httpServer.listen(port, () => {
-  log.blue(`Server started, listening on port ${port}!`)
+  logger.info(`Server started, listening on port ${port}!`)
 })
 httpServer.on("error", onError)
 httpServer.on("listening", onListening)
@@ -75,7 +71,5 @@ function onError(error) {
 function onListening() {
   const addr = httpServer.address()
   const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port
-  log("Listening on " + bind)
+  logger.info("Listening on " + bind)
 }
-
-export { log }

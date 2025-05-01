@@ -22,7 +22,7 @@ export function InitializeRoom() {
   useEffect(() => {
     const getRoom = (val) => setRoom(deserialize(val))
 
-    socket.emit("joinRoom", roomId, isPrivate, name, avatarSeed)
+    socket.emit("joinRoom", { roomId, isPrivate, name, avatarSeed })
     socket.on("getRoom", getRoom)
     return () => {
       socket.off("getRoom", getRoom)
@@ -44,7 +44,11 @@ export function InitializeRoom() {
     return (
       <LayoutWithHeader className="d-flex align-items-center justify-content-center flex-column gap-3">
         <h1 className="h3">Initializing room</h1>
-        <JellyTriangle size={60} speed={1} color="var(--bs-primary)" />
+        <JellyTriangle
+          size={60}
+          speed={1}
+          color="var(--bs-primary)"
+        />
       </LayoutWithHeader>
     )
   }
@@ -53,7 +57,11 @@ export function InitializeRoom() {
     return (
       <LayoutWithHeader className="d-flex align-items-center justify-content-center flex-column gap-3">
         <h1 className="h3">Disconnected!</h1>
-        <JellyTriangle size={60} speed={1} color="var(--bs-primary)" />
+        <JellyTriangle
+          size={60}
+          speed={1}
+          color="var(--bs-primary)"
+        />
         <p>
           Hold on! We're trying to get you back on track. If this page is stuck
           try <Link to="/">rejoining a different room</Link>

@@ -13,7 +13,6 @@
     "test": "cd client && yarn test"
   },
   "dependencies": {
-    "ansi-colors": "^4.1.3",
     "babel-eslint": "^10.1.0",
     "better-sqlite3": "^11.9.1",
     "concurrently": "^7.2.0",
@@ -26,6 +25,7 @@
     "morgan": "~1.10.0",
     "nanoid": "^3.3.4",
     "nodemon": "^2.0.16",
+    "pino": "^9.6.0",
     "rimraf": "^3.0.2",
     "serialize-javascript": "^6.0.0",
     "socket.io": "^4.5.0"

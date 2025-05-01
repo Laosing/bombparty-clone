@@ -2,8 +2,8 @@ import { nanoid } from "nanoid"
 import serialize from "serialize-javascript"
 import { Timer } from "./Timer.js"
 import { getRandomLettersFn } from "./data/randomLetters.js"
-import { log } from "./index.js"
 import Database from "better-sqlite3"
+import pino from "pino"
 
 class Dictionary {
   constructor() {
@@ -54,6 +54,15 @@ function connection(io, socket) {
   let _firstRound = true
   let _roomId
 
+  const log = pino({
+    mixin() {
+      return {
+        userId: socket.handshake.auth.userId,
+        roomId: _roomId,
+      }
+    },
+  })
+
   socket.on("resetClient", resetClient)
   socket.on("leaveRoom", disconnect)
   socket.on("joinRoom", joinRoom)
@@ -75,11 +84,11 @@ function connection(io, socket) {
   socket.on("getMessages", relayMessages)
   socket.on("disconnect", disconnect)
   socket.on("connect_error", (err) => {
-    log.red(`connect_error due to ${err.message}`)
+    log.error(`connect_error due to ${err.message}`)
   })
-  socket.onAny((eventName, ...args) => log.yellow(eventName, ...args))
+  socket.onAny((eventName, ...args) => log.info({ eventName, ...args }))
 
-  function joinRoom(roomId, isPrivate, name, avatarSeed) {
+  function joinRoom({ roomId, isPrivate, name, avatarSeed }) {
     _roomId = roomId
 
     initializeRoom()
@@ -213,7 +222,7 @@ function connection(io, socket) {
     const { room } = getRoom()
     const randomWord = dictionary.getRandomWord()
     const [letters, word] = getRandomLettersFn(randomWord)()
-    log.magenta("word", word)
+    log.info({ word, letters })
     room.set("letterBlend", letters)
     room.set("letterBlendWord", word)
   }
@@ -301,7 +310,7 @@ function connection(io, socket) {
     const isCurrentGroup = currentGroup === groupId
 
     if (isBlend && isDictionary && isUnique && isLongEnough && isCurrentGroup) {
-      log.green(`valid word: ${value}`)
+      log.info(`valid word: ${value}`)
       io.sockets
         .in(_roomId)
         .emit("wordValidation", true, { value, letterBlend, currentGroup })
@@ -313,7 +322,7 @@ function connection(io, socket) {
       timerConstructor.reset()
       switchGroup()
     } else {
-      log.green(`invalid word: ${value}`)
+      log.info(`invalid word: ${value}`)
       io.sockets.in(_roomId).emit("wordValidation", false, {
         isBlend,
         isDictionary,
@@ -723,7 +732,7 @@ function connection(io, socket) {
 
   function disconnect(reason) {
     if (!_roomId) return
-    if (reason) console.log({ reason })
+    if (reason) log.info({ reason })
 
     const { userId } = socket.handshake.auth
     const { users } = getRoom()
@@ -733,7 +742,7 @@ function connection(io, socket) {
     checkNoUsers()
     relayRoom()
     if (users.size === 0 && _roomId) {
-      log.red(`Deleting room: ${_roomId}`)
+      log.info(`Deleting room: ${_roomId}`)
       rooms.delete(_roomId)
     }
   }
