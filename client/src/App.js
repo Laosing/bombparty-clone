@@ -29,7 +29,7 @@ function App() {
 
 function Captcha({ children }) {
   const ref = React.useRef()
-  const [status, setStatus] = React.useState("solved")
+  const [status, setStatus] = React.useState()
 
   if (status === "solved") {
     return <>{children}</>
