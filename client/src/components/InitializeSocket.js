@@ -20,7 +20,11 @@ export const InitializeSocket = ({ children }) => {
         )
       }
 
-      const params = { auth: { userId } }
+      const params = {
+        auth: { userId },
+        upgrade: false,
+        transports: ["websocket"],
+      }
       const props = isDevEnv
         ? [`http://${window.location.hostname}:8080`, params]
         : [params]

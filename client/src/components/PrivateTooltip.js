@@ -1,9 +1,13 @@
 import React from "react"
-import { OverlayTrigger, Tooltip } from "react-bootstrap"
+import OverlayTrigger from "react-bootstrap/OverlayTrigger"
+import Tooltip from "react-bootstrap/Tooltip"
 
 export const PrivateTooltip = () => {
   const renderTooltip = (props) => (
-    <Tooltip id="private-tooltip" {...props}>
+    <Tooltip
+      id="private-tooltip"
+      {...props}
+    >
       This room is private
     </Tooltip>
   )

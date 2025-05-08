@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useDeferredValue } from "react"
-import { Form, Badge } from "react-bootstrap"
+import Form from "react-bootstrap/Form"
+import Badge from "react-bootstrap/Badge"
 import clsx from "clsx"
 import { LETTER_BONUS } from "constants/constants"
 import { useSocket } from "hooks/useSocket"
@@ -68,7 +69,7 @@ export function PlayerInput() {
   const inputProps = {
     disabled: !isCurrentGroup || !isActiveTyper,
     ...((!isCurrentGroup || !isActiveTyper) && { value: deferredValue }),
-    ...(isCurrentGroup && isActiveTyper && { onChange: onChange })
+    ...(isCurrentGroup && isActiveTyper && { onChange: onChange }),
   }
 
   return (
@@ -103,7 +104,7 @@ export function PlayerInput() {
             style={{
               transform: "translate(-50%, -50%)",
               zIndex: 20,
-              fontSize: "1em"
+              fontSize: "1em",
             }}
           >
             {bonusLetter.toUpperCase()}
@@ -116,7 +117,7 @@ export function PlayerInput() {
             style={{
               transform: "translate(-50%, -50%)",
               zIndex: 20,
-              fontSize: "1em"
+              fontSize: "1em",
             }}
           >
             {errorReason}

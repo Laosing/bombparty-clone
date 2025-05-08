@@ -1,5 +1,6 @@
 import React, { useEffect } from "react"
-import { Button, Stack } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
+import Stack from "react-bootstrap/Stack"
 import clsx from "clsx"
 import soundLobby from "audio/lobby.m4a"
 import soundLobby2 from "audio/lobby-2.m4a"
@@ -88,11 +89,17 @@ export function Game() {
           {!running && !isCountDown && (
             <>
               {isInGame ? (
-                <Button variant="danger" onClick={() => leaveGame()}>
+                <Button
+                  variant="danger"
+                  onClick={() => leaveGame()}
+                >
                   Leave game
                 </Button>
               ) : (
-                <Button variant="primary" onClick={() => joinGame()}>
+                <Button
+                  variant="primary"
+                  onClick={() => joinGame()}
+                >
                   Join game
                 </Button>
               )}

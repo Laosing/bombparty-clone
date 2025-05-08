@@ -1,6 +1,10 @@
 import React, { useEffect } from "react"
 import { Link } from "react-router-dom"
-import { Container, Button, Row, Col, ListGroup } from "react-bootstrap"
+import Container from "react-bootstrap/Container"
+import Button from "react-bootstrap/Button"
+import Row from "react-bootstrap/Row"
+import Col from "react-bootstrap/Col"
+import ListGroup from "react-bootstrap/ListGroup"
 import clsx from "clsx"
 import { useGameStore } from "hooks/useStore"
 import { useSocket } from "hooks/useSocket"
@@ -38,7 +42,10 @@ export function Room() {
 
   return (
     <>
-      <Container fluid className={clsx("d-flex flex-grow-1", theme)}>
+      <Container
+        fluid
+        className={clsx("d-flex flex-grow-1", theme)}
+      >
         {isAdmin && (
           <Button
             variant="link"
@@ -49,13 +56,19 @@ export function Room() {
           </Button>
         )}
         <Row className="flex-grow-1">
-          <Col md={8} className="position-relative">
+          <Col
+            md={8}
+            className="position-relative"
+          >
             <GithubLink />
             <Layout className="p-0">
               <Game />
             </Layout>
           </Col>
-          <Col md={4} className={clsx("p-0 d-flex flex-column sidebar")}>
+          <Col
+            md={4}
+            className={clsx("p-0 d-flex flex-column sidebar")}
+          >
             <div className="p-3 pb-0 text-center">
               <AvatarSettings />
               <EditName />
@@ -66,7 +79,12 @@ export function Room() {
                   Current room: <strong>{roomId}</strong>{" "}
                   {isPrivate && <PrivateTooltip />}
                 </span>
-                <Button as={Link} to="/" size="sm" variant="danger">
+                <Button
+                  as={Link}
+                  to="/"
+                  size="sm"
+                  variant="danger"
+                >
                   Leave room
                 </Button>
               </ListGroup.Item>

@@ -1,5 +1,5 @@
 import React from "react"
-import { Button } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
 import { useSocket } from "hooks/useSocket"
 import { useRoom } from "hooks/useRoom"
 
@@ -21,7 +21,10 @@ export function HeartLetters() {
   }
 
   return (
-    <div style={{ maxWidth: "477px" }} className="m-auto">
+    <div
+      style={{ maxWidth: "477px" }}
+      className="m-auto"
+    >
       {[...alphabet].map((letter) => (
         <Button
           as={"span"}

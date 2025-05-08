@@ -1,29 +1,18 @@
 import React, { useEffect } from "react"
-import { Form, Row, Col } from "react-bootstrap"
-import { shallow } from "zustand/shallow"
+import Form from "react-bootstrap/Form"
+import Row from "react-bootstrap/Row"
+import Col from "react-bootstrap/Col"
 import { Howler } from "howler"
 import { useGameStore, useSoundStore } from "hooks/useStore"
 import { MusicLabel } from "components/MusicLabel"
 
 export function AudioSettings() {
-  const [
-    music,
-    toggleMusic,
-    soundEffects,
-    toggleSoundEffects,
-    volume,
-    setVolume,
-  ] = useSoundStore(
-    (store) => [
-      store.music,
-      store.toggleMusic,
-      store.soundEffects,
-      store.toggleSoundEffects,
-      store.volume,
-      store.setVolume,
-    ],
-    shallow
-  )
+  const music = useSoundStore((store) => store.music)
+  const toggleMusic = useSoundStore((store) => store.toggleMusic)
+  const soundEffects = useSoundStore((store) => store.soundEffects)
+  const toggleSoundEffects = useSoundStore((store) => store.toggleSoundEffects)
+  const volume = useSoundStore((store) => store.volume)
+  const setVolume = useSoundStore((store) => store.setVolume)
 
   const theme = useGameStore((store) => store.theme)
   const switchTheme = useGameStore((store) => store.switchTheme)
@@ -37,8 +26,14 @@ export function AudioSettings() {
     <Form className="p-3">
       <Row>
         <Col>
-          <Form.Check type="switch" id="settingsMusic">
-            <Form.Check.Input checked={!!music} onChange={toggleMusic} />
+          <Form.Check
+            type="switch"
+            id="settingsMusic"
+          >
+            <Form.Check.Input
+              checked={!!music}
+              onChange={toggleMusic}
+            />
             <Form.Check.Label>Music</Form.Check.Label>
             <MusicLabel toggleMusicVersion={toggleMusicVersion} />
           </Form.Check>
@@ -60,7 +55,10 @@ export function AudioSettings() {
           />
         </Col>
       </Row>
-      <Form.Label htmlFor="settingsVolume" className="mt-2 mb-0">
+      <Form.Label
+        htmlFor="settingsVolume"
+        className="mt-2 mb-0"
+      >
         Volume
       </Form.Label>
       <Form.Range

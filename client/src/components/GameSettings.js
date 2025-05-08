@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react"
-import { Button, Form, Row, Stack } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
+import Form from "react-bootstrap/Form"
+import Row from "react-bootstrap/Row"
+import Stack from "react-bootstrap/Stack"
 import { deserialize } from "functions/deserialize"
 import { useSocket } from "hooks/useSocket"
 import { useRoom } from "hooks/useRoom"
 import { HardmodeTooltip } from "components/HardmodeTooltip"
+import { isDevEnv } from "functions/session"
 
 export function GameSettings() {
   const { socket, userId } = useSocket()
@@ -65,7 +69,10 @@ export function GameSettings() {
 
   return (
     <>
-      <Form onSubmit={submitForm} className="p-3">
+      <Form
+        onSubmit={submitForm}
+        className="p-3"
+      >
         <Row>
           <Stack gap={2}>
             {/* <Form.Check
@@ -82,7 +89,7 @@ export function GameSettings() {
                 key={`form-timer-${timer}`}
                 name="timer"
                 defaultValue={String(timer)}
-                min="1"
+                min={isDevEnv ? "1" : "10"}
                 max="59"
                 step="1"
                 disabled={disabled}

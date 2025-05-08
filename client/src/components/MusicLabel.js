@@ -1,5 +1,6 @@
 import React from "react"
-import { Button, Badge } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
+import Badge from "react-bootstrap/Badge"
 
 export const MusicLabel = ({ toggleMusicVersion }) => (
   <Badge

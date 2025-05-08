@@ -1,5 +1,6 @@
 import React from "react"
-import { OverlayTrigger, Tooltip } from "react-bootstrap"
+import OverlayTrigger from "react-bootstrap/OverlayTrigger"
+import Tooltip from "react-bootstrap/Tooltip"
 import { ReactComponent as GithubIcon } from "images/github.svg"
 
 export const GithubLink = () => {
@@ -17,12 +18,18 @@ export const GithubLink = () => {
 
 const LinkTooltip = () => {
   const renderTooltip = (props) => (
-    <Tooltip id="link-tooltip" {...props}>
+    <Tooltip
+      id="link-tooltip"
+      {...props}
+    >
       Check it out on github!
     </Tooltip>
   )
   return (
-    <OverlayTrigger overlay={renderTooltip} placement="right">
+    <OverlayTrigger
+      overlay={renderTooltip}
+      placement="right"
+    >
       <GithubIcon style={{ fill: "var(--bs-gray-600)" }} />
     </OverlayTrigger>
   )

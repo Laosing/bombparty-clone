@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { deserialize } from "functions/deserialize"
-import { Button, Badge } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
+import Badge from "react-bootstrap/Badge"
 import { useGameStore } from "hooks/useStore"
 import { useSocket } from "hooks/useSocket"
 
@@ -36,7 +37,11 @@ export const Rooms = () => {
             className="d-inline-flex align-items-center fw-bold"
           >
             {room}
-            <Badge bg="dark" className="ms-2" style={{ fontSize: "0.7em" }}>
+            <Badge
+              bg="dark"
+              className="ms-2"
+              style={{ fontSize: "0.7em" }}
+            >
               {data.players.size}
             </Badge>
           </Button>

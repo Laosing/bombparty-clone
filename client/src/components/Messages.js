@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react"
-import { Form, ListGroup, ListGroupItem } from "react-bootstrap"
+import Form from "react-bootstrap/Form"
+import ListGroup from "react-bootstrap/ListGroup"
+import ListGroupItem from "react-bootstrap/ListGroupItem"
 import { deserialize } from "functions/deserialize"
 import { useSocket } from "hooks/useSocket"
 
@@ -40,7 +42,11 @@ function Messages() {
 
   return (
     <>
-      <div className="overflow-auto" style={{ flex: "1 1 7em" }} ref={ref}>
+      <div
+        className="overflow-auto"
+        style={{ flex: "1 1 7em" }}
+        ref={ref}
+      >
         <ListGroup className="mt-auto">
           {[...messages]
             .sort((a, b) => a.time - b.time)
@@ -51,8 +57,8 @@ function Messages() {
                   transition: "box-shadow .3s ease",
                   ...(notify &&
                     index === array.length - 1 && {
-                      boxShadow: "inset 0 0 0 1px var(--bs-danger)"
-                    })
+                      boxShadow: "inset 0 0 0 1px var(--bs-danger)",
+                    }),
                 }}
               >
                 {message.user.name ? (
@@ -95,8 +101,14 @@ const MessageInput = () => {
   }
 
   return (
-    <Form onSubmit={submitForm} className="mt-auto">
-      <Form.Control ref={inputRef} placeholder="Type your message" />
+    <Form
+      onSubmit={submitForm}
+      className="mt-auto"
+    >
+      <Form.Control
+        ref={inputRef}
+        placeholder="Type your message"
+      />
     </Form>
   )
 }

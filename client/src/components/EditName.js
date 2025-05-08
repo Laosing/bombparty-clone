@@ -1,6 +1,5 @@
 import React from "react"
-import { Button } from "react-bootstrap"
-import { shallow } from "zustand/shallow"
+import Button from "react-bootstrap/Button"
 import { getRandomName } from "functions/session"
 import { useGameStore } from "hooks/useStore"
 import { useSocket } from "hooks/useSocket"
@@ -8,10 +7,9 @@ import { useSocket } from "hooks/useSocket"
 export function EditName() {
   const { socket } = useSocket()
 
-  const [name, setName, userId] = useGameStore(
-    (state) => [state.name, state.setName, state.userId],
-    shallow
-  )
+  const name = useGameStore((state) => state.name)
+  const setName = useGameStore((state) => state.setName)
+  const userId = useGameStore((state) => state.userId)
 
   const editName = () => {
     const namePrompt = window.prompt(

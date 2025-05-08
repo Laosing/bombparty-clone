@@ -1,5 +1,8 @@
 import React, { useEffect } from "react"
-import { Button, Stack, ListGroup, Badge } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
+import Stack from "react-bootstrap/Stack"
+import ListGroup from "react-bootstrap/ListGroup"
+import Badge from "react-bootstrap/Badge"
 import clsx from "clsx"
 import soundBoom from "audio/boom.mp3"
 import soundValid from "audio/valid.mp3"
@@ -99,7 +102,10 @@ export function Players() {
 
         {Array.from(groups, ([groupId, group]) => {
           return (
-            <ListGroup key={groupId} className="mb-3">
+            <ListGroup
+              key={groupId}
+              className="mb-3"
+            >
               {[...group.members].map((memberId, index) => {
                 const isActiveTyper =
                   group.activeTyper % group.members.size === index
@@ -127,7 +133,7 @@ export function Players() {
                       className="position-absolute top-50 start-0"
                       style={{
                         width: "35px",
-                        transform: `translate(-120%, -50%)`
+                        transform: `translate(-120%, -50%)`,
                       }}
                     >
                       {!running && <Avatar id={member.avatar} />}
@@ -158,7 +164,7 @@ export function Players() {
                         className="position-absolute top-50 end-0 text-decoration-none p-0"
                         style={{
                           width: "35px",
-                          transform: `translate(100%, -50%)`
+                          transform: `translate(100%, -50%)`,
                         }}
                         onClick={() => kickPlayer(member.id)}
                       >

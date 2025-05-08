@@ -1,6 +1,9 @@
 import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Button, Form, InputGroup, FormControl } from "react-bootstrap"
+import Button from "react-bootstrap/Button"
+import Form from "react-bootstrap/Form"
+import InputGroup from "react-bootstrap/InputGroup"
+import FormControl from "react-bootstrap/FormControl"
 import { getRoomId } from "functions/session"
 import { LayoutWithHeader } from "components/Layout"
 import { Rooms } from "components/Rooms"
@@ -23,6 +26,7 @@ export const Home = () => {
       <p className="mb-5">Create or join a room to get started</p>
       <Button
         size="lg"
+        variant="primary"
         as={Link}
         to={getRoomId()}
         className="mb-1"
@@ -37,7 +41,10 @@ export const Home = () => {
         label="Private room"
         className="d-flex gap-2 justify-content-center mb-5"
       />
-      <Form onSubmit={onSubmit} className="mb-5">
+      <Form
+        onSubmit={onSubmit}
+        className="mb-5"
+      >
         <Form.Label htmlFor="existing-room">
           Know an existing room? Enter it here!
         </Form.Label>
@@ -48,7 +55,10 @@ export const Home = () => {
             name="room"
             style={{ maxWidth: "120px" }}
           />
-          <Button type="submit" variant="outline-secondary">
+          <Button
+            type="submit"
+            variant="outline-secondary"
+          >
             Join
           </Button>
         </InputGroup>

@@ -1,5 +1,7 @@
 import React from "react"
-import { Row, Col, Badge } from "react-bootstrap"
+import Row from "react-bootstrap/Row"
+import Col from "react-bootstrap/Col"
+import Badge from "react-bootstrap/Badge"
 import confetti from "canvas-confetti"
 import { useRoom } from "hooks/useRoom"
 import { Highlight } from "components/Highlight"
@@ -37,7 +39,10 @@ export function Winner({ winner }) {
   return (
     <div>
       <div className="mt-2 animate__animated animate__bounceIn">
-        <h3 className="mb-3" ref={refCallback}>
+        <h3
+          className="mb-3"
+          ref={refCallback}
+        >
           {`Winner${winner.members.size === 1 ? "" : "s"}! `}
           <Badge
             bg={hardMode ? "danger" : "primary"}
@@ -49,7 +54,10 @@ export function Winner({ winner }) {
 
         <Row className="justify-content-center align-items-center">
           {[...winner.members].map((user) => (
-            <Col key={users.get(user).id} className="col-auto">
+            <Col
+              key={users.get(user).id}
+              className="col-auto"
+            >
               <div className="mb-3">
                 <Avatar
                   className="animate__animated animate__infinite animate__pulse animate__slow w-100"

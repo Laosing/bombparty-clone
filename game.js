@@ -86,7 +86,11 @@ function connection(io, socket) {
   socket.on("connect_error", (err) => {
     log.error(`connect_error due to ${err.message}`)
   })
-  socket.onAny((eventName, ...args) => log.info({ eventName, ...args }))
+  socket.onAny((eventName, ...args) => {
+    if (eventName !== "setGlobalInputText") {
+      log.info({ eventName, ...args })
+    }
+  })
 
   function joinRoom({ roomId, isPrivate, name, avatarSeed }) {
     _roomId = roomId

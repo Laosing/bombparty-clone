@@ -1,5 +1,5 @@
 import React from "react"
-import { Alert } from "react-bootstrap"
+import Alert from "react-bootstrap/Alert"
 import clsx from "clsx"
 import { useGameStore } from "hooks/useStore"
 
@@ -7,6 +7,7 @@ export const Rules = ({ className }) => {
   const setIsAdmin = useGameStore((state) => state.setIsAdmin)
   const toggleAdmin = () => setIsAdmin((p) => !p)
   const theme = useGameStore((store) => store.theme)
+
   return (
     <Alert
       style={{ maxWidth: "30em" }}
