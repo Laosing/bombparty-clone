@@ -1,70 +1,233 @@
-# Getting Started with Create React App
+# Bombparty Clone - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The React client application for Bombparty Clone, built with modern technologies for a responsive and engaging user experience.
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+This is the frontend component of the Bombparty Clone game. It provides a real-time, interactive UI for players to join rooms, customize game settings, and play the word game with multiplayer support via Socket.io.
 
-### `yarn start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite 7
+- **UI Library**: React Bootstrap
+- **State Management**: Zustand
+- **Real-time Communication**: Socket.io Client
+- **Testing**: Vitest + React Testing Library
+- **Styling**: SCSS with CSS Custom Properties
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Getting Started
 
-### `yarn test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js 18 or higher
+- pnpm (or npm/yarn)
 
-### `yarn build`
+### Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+# Install dependencies
+pnpm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Development
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Run the development server:
 
-### `yarn eject`
+```bash
+pnpm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The application will open at `http://localhost:3000` with hot module reloading enabled.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Building
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Build for production:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+pnpm build
+```
 
-## Learn More
+The optimized build will be output to the `dist/` directory.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Testing
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Run the test suite:
 
-### Code Splitting
+```bash
+# Run tests once
+pnpm test
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# Run tests in watch mode
+pnpm test -- --watch
+```
 
-### Analyzing the Bundle Size
+## Project Structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```
+src/
+├── components/          # React components
+│   ├── Game.tsx        # Main game component
+│   ├── Home.tsx        # Home/lobby page
+│   ├── Room.tsx        # Room management
+│   ├── Players.tsx     # Player list display
+│   ├── Layout.tsx      # Layout wrapper
+│   └── ...
+├── hooks/              # Custom React hooks
+│   ├── useSocket.ts    # Socket.io connection
+│   ├── useRoom.ts      # Room state management
+│   ├── useStore.ts     # Zustand stores
+│   ├── useHowl.ts      # Audio management
+│   └── ...
+├── functions/          # Utility functions
+│   ├── session.ts      # Session utilities
+│   ├── deserialize.ts  # Data deserialization
+│   └── reset.ts        # Reset utilities
+├── constants/          # Constants
+│   └── constants.ts
+├── audio/              # Audio files
+├── images/             # Image assets and SVGs
+├── tests/              # Test utilities
+│   ├── setup.tsx       # Vitest setup
+│   ├── fixtures.ts     # Test data
+│   └── utils.tsx       # Test helpers
+├── App.tsx             # Root component
+├── App.scss            # Global styles
+└── index.tsx           # Entry point
+```
 
-### Making a Progressive Web App
+## Key Features
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Components
 
-### Advanced Configuration
+- **Game Component** - Main game interface with timer, letter blend, and player input
+- **Room Management** - Create, join, and manage game rooms
+- **Settings Panel** - Customize game rules and difficulty
+- **Player List** - View all players and their scores
+- **Message System** - Real-time chat during gameplay
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Hooks
 
-### Deployment
+- **useSocket** - Manages Socket.io connection and events
+- **useRoom** - Provides access to room state
+- **useStore** - Zustand stores for game and sound settings
+- **useHowl** - Audio playback with Howler.js
+- **useInterval** - Interval management
+- **useIdle** - User idle detection
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### State Management
 
-### `yarn build` fails to minify
+The application uses Zustand for global state:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `useGameStore` - Game settings (name, theme, avatar)
+- `useSoundStore` - Audio settings (music, sound effects, volume)
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the client directory if needed:
+
+```
+VITE_API_URL=http://localhost:3001
+```
+
+### Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## Performance Optimizations
+
+- Code splitting with dynamic imports
+- Lazy loading of components
+- Optimized bundle size
+- Image optimization with modern formats
+- CSS-in-JS minimization with Vite
+
+## Accessibility
+
+The application follows WCAG 2.1 AA standards:
+
+- Semantic HTML structure
+- ARIA labels and roles
+- Keyboard navigation support
+- Color contrast compliance
+- Screen reader compatible
+
+## Development Tips
+
+### Running with Backend
+
+To run the full application stack, run from the project root:
+
+```bash
+pnpm dev
+```
+
+This will start both the frontend (port 3000) and backend (port 3001).
+
+### Hot Module Replacement
+
+Vite provides fast HMR - changes to React components are reflected instantly in the browser.
+
+### TypeScript
+
+All files use TypeScript for type safety. Run type checking:
+
+```bash
+tsc --noEmit
+```
+
+### Linting & Formatting
+
+While there's no ESLint config in this setup, follow these conventions:
+
+- Use TypeScript strict mode
+- Follow React hooks rules
+- Use descriptive variable names
+- Add JSDoc comments for complex functions
+
+## Troubleshooting
+
+### Port Already in Use
+
+If port 3000 is already in use:
+
+```bash
+# Change in vite.config.ts
+server: {
+  port: 3001,
+  ...
+}
+```
+
+### Socket.io Connection Issues
+
+Ensure the backend server is running on the expected port and the `VITE_API_URL` environment variable is set correctly.
+
+### Build Size Issues
+
+Check bundle size with Vite's built-in analyzer:
+
+```bash
+pnpm build -- --analyze
+```
+
+## Learning Resources
+
+- [React Documentation](https://react.dev/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Socket.io Client Guide](https://socket.io/docs/v4/client-api/)
+- [Zustand Documentation](https://github.com/pmndrs/zustand)
+
+## Contributing
+
+This is part of the Bombparty Clone project. For contribution guidelines, see the [main README](../README.md).
+
+---
+
+**Back to [main project](../README.md)**
