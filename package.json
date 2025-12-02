@@ -6,15 +6,14 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently 'nodemon index.js' 'cd client && yarn && yarn start'",
+    "dev": "concurrently 'node index.js' 'cd client && pnpm install && pnpm start'",
     "start": "node index.js",
-    "build": "cd client && yarn && yarn build",
+    "build": "cd client && pnpm install && pnpm build",
     "deploy": "fly deploy --remote-only",
-    "test": "cd client && yarn test"
+    "test": "cd client && pnpm test"
   },
   "dependencies": {
-    "babel-eslint": "^10.1.0",
-    "better-sqlite3": "^11.9.1",
+    "better-sqlite3": "^12.5.0",
     "concurrently": "^9.1.2",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
@@ -29,5 +28,9 @@
     "serialize-javascript": "^6.0.2",
     "socket.io": "^4.8.1"
   },
-  "devDependencies": {}
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  }
 }
