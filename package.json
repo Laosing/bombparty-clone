@@ -2,13 +2,13 @@
   "name": "@laosing/bombparty-clone",
   "version": "0.0.0",
   "private": true,
-  "main": "index.js",
+  "main": "dist/index.js",
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently 'node index.js' 'cd client && pnpm install && pnpm start'",
-    "start": "node index.js",
-    "build": "cd client && pnpm install && pnpm build",
+    "dev": "concurrently 'tsx index.ts' 'cd client && pnpm install && pnpm start'",
+    "build": "tsc && cd client && pnpm install && pnpm build",
+    "start": "node dist/index.js",
     "deploy": "fly deploy --remote-only",
     "test": "cd client && pnpm test"
   },
@@ -32,5 +32,17 @@
     "onlyBuiltDependencies": [
       "better-sqlite3"
     ]
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.10.1",
+    "@types/serialize-javascript": "^5.0.4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
