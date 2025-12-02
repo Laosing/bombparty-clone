@@ -6,11 +6,11 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently 'nodemon index.js' 'cd client && yarn && yarn start'",
+    "dev": "concurrently 'nodemon index.js' 'cd client && pnpm install && pnpm start'",
     "start": "node index.js",
-    "build": "cd client && yarn && yarn build",
+    "build": "cd client && pnpm install && pnpm build",
     "deploy": "fly deploy --remote-only",
-    "test": "cd client && yarn test"
+    "test": "cd client && pnpm test"
   },
   "dependencies": {
     "babel-eslint": "^10.1.0",

@@ -1,6 +1,14 @@
 import { render, screen } from "@testing-library/react"
 import { roomWithWinner, roomWrapper } from "tests/utils"
 import { Winner } from "./Winner"
+import { vi } from "vitest"
+
+// Mock canvas-confetti because it uses canvas APIs not available in jsdom or needing strict mocks
+vi.mock("canvas-confetti", () => {
+  const confetti = vi.fn()
+  confetti.reset = vi.fn()
+  return { default: confetti }
+})
 
 test("renders the winner", () => {
   const winner = roomWithWinner.get("winner")
