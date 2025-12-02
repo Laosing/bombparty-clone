@@ -4,13 +4,12 @@ import { Server } from "socket.io";
 import http from "http";
 
 import { app } from "./app.js";
-import game from "./game.js";
+import game from "./socket/index.js";
 
-import pino from "pino";
+import { logger } from "./utils/logger.js";
+import { config } from "./config/env.js";
 
-const logger = pino();
-
-const port = normalizePort(process.env.PORT || "8080");
+const port = normalizePort(config.port);
 app.set("port", port);
 
 const httpServer = http.createServer(app);

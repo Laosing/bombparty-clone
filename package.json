@@ -6,9 +6,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently 'tsx index.ts' 'cd client && pnpm install && pnpm start'",
+    "dev": "concurrently 'tsx src/server.ts' 'cd client && pnpm install && pnpm start'",
     "build": "tsc && cd client && pnpm install && pnpm build",
-    "start": "node dist/index.js",
+    "start": "node dist/server.js",
     "deploy": "fly deploy --remote-only",
     "test": "cd client && pnpm test"
   },
