@@ -1,0 +1,27 @@
+{
+  "tasks": {
+    "start": "deno run -A src/server.ts",
+    "dev:backend": "deno run -A --watch src/server.ts",
+    "dev:client": "deno run -A --node-modules-dir npm:vite --config client/vite.config.ts client",
+    "dev": "deno task dev:backend & deno task dev:client",
+    "test": "deno test -A tests/"
+  },
+  "imports": {
+    "express": "npm:express@^5.1.0",
+    "socket.io": "npm:socket.io@^4.8.1",
+    "better-sqlite3": "npm:better-sqlite3@^12.5.0",
+    "pino": "npm:pino@^9.6.0",
+    "dotenv": "npm:dotenv@^16.0.1",
+    "cookie-parser": "npm:cookie-parser@~1.4.4",
+    "morgan": "npm:morgan@~1.10.0",
+    "cors": "npm:cors@^2.8.5",
+    "nanoid": "npm:nanoid@^5.1.5",
+    "serialize-javascript": "npm:serialize-javascript@^6.0.2",
+    "debug": "npm:debug@~4.4.0",
+    "@types/node": "npm:@types/node@^22.0.0"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "dom"]
+  },
+  "nodeModulesDir": "auto"
+}

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
-import { Timer } from "../Timer.js";
-import { User, Room, Group, Message, Settings, RoomProps } from "../types.js";
+import { Timer } from "../Timer.ts";
+import { User, Room, Group, Message, Settings, RoomProps } from "../types.ts";
 
 // We'll move the Room state management logic here eventually.
 // For now, let's keep the types and maybe some helper functions.

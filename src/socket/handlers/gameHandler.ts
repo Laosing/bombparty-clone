@@ -2,10 +2,10 @@ import { Server, Socket } from "socket.io";
 import { nanoid } from "nanoid";
 import serialize from "serialize-javascript";
 import pino from "pino";
-import { User, Room, Group, Message, Settings, RoomProps } from "../../types.js";
-import { Timer } from "../../Timer.js";
-import { dictionaryService } from "../../services/DictionaryService.js";
-import { getRandomLettersFn } from "../../shared/utils.js";
+import { User, Room, Group, Message, Settings, RoomProps } from "../../types.ts";
+import { Timer } from "../../Timer.ts";
+import { dictionaryService } from "../../services/DictionaryService.ts";
+import { getRandomLettersFn } from "../../shared/utils.ts";
 
 // Global state for rooms (migrated from game.ts)
 export const rooms = new Map<string, Map<keyof Room, any>>();
@@ -494,9 +494,8 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     if (running) return;
 
     const interval = setInterval(countDownFn, 1000);
-    const intervalId = interval[Symbol.toPrimitive]();
 
-    room.set("isCountDown", true).set("_countDownInterval", intervalId);
+    room.set("isCountDown", true).set("_countDownInterval", interval);
 
     let countDown = 5;
     function countDownFn() {

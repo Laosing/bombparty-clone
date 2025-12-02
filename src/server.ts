@@ -3,11 +3,11 @@
 import { Server } from "socket.io";
 import http from "http";
 
-import { app } from "./app.js";
-import game from "./socket/index.js";
+import { app } from "./app.ts";
+import game from "./socket/index.ts";
 
-import { logger } from "./utils/logger.js";
-import { config } from "./config/env.js";
+import { logger } from "./utils/logger.ts";
+import { config } from "./config/env.ts";
 
 const port = normalizePort(config.port);
 app.set("port", port);
@@ -56,11 +56,11 @@ function onError(error: NodeJS.ErrnoException) {
   switch (error.code) {
     case "EACCES":
       console.error(bind + " requires elevated privileges");
-      process.exit(1);
+      Deno.exit(1);
       break;
     case "EADDRINUSE":
       console.error(bind + " is already in use");
-      process.exit(1);
+      Deno.exit(1);
       break;
     default:
       throw error;

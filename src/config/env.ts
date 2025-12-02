@@ -1,8 +1,6 @@
-import dotenv from "dotenv";
-
-dotenv.config();
+import "dotenv/config";
 
 export const config = {
-  port: process.env.PORT || "8080",
-  nodeEnv: process.env.NODE_ENV || "development",
+  port: Deno.env.get("PORT") || "8080",
+  nodeEnv: Deno.env.get("NODE_ENV") || "development",
 };

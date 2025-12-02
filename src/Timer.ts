@@ -5,7 +5,7 @@
 export class Timer {
   private _timer: number = 0
   private _defaultTimer: number = 0
-  private _interval: NodeJS.Timeout | undefined
+  private _interval: number | undefined
   private _events: Map<string, () => void> = new Map()
 
   /**
