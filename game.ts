@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid"
 import serialize from "serialize-javascript"
-import { Timer, TimerInstance } from "./Timer.js"
+import { Timer } from "./Timer.js"
 import { getRandomLettersFn } from "./shared/utils.js"
 import Database from "better-sqlite3"
 import pino from "pino"
@@ -684,7 +684,7 @@ function connection(io: Server, socket: Socket) {
       letterBlend: setProp("letterBlend", ""),
       letterBlendWord: setProp("letterBlendWord", ""),
       letterBlendCounter: setProp("letterBlendCounter", 0),
-      timerConstructor: setProp("timerConstructor", Timer()), // Factory call
+      timerConstructor: setProp("timerConstructor", new Timer()), // Factory call
       timer: setProp("timer", 0),
       round: setProp("round", 0),
       hardMode: setProp("hardMode", false),
