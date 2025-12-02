@@ -10,6 +10,6 @@
     "outDir": "dist",
     "sourceMap": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "client"]
 }
