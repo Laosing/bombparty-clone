@@ -1,82 +1,110 @@
-export interface TimerInstance {
-  setTimer: (time: number) => void;
-  reset: () => void;
-  start: (time?: number) => void;
-  on: (event: string, fn: () => void) => void;
-  removeAllEventListeners: () => void;
-  stop: () => void;
-  getTime: () => number;
-}
+/**
+ * Timer class that manages a countdown timer with event support.
+ * Emits events for timer updates and completion.
+ */
+export class Timer {
+  private _timer: number = 0
+  private _defaultTimer: number = 0
+  private _interval: NodeJS.Timeout | undefined
+  private _events: Map<string, () => void> = new Map()
 
-export function Timer(): TimerInstance {
-  let _timer = 0;
-  let _defaultTimer = 0;
-  let _interval: NodeJS.Timeout | undefined;
+  /**
+   * Set the timer duration
+   * @param time - The time in seconds
+   */
+  setTimer(time: number): void {
+    this._timer = time
+    this._defaultTimer = time
+  }
 
-  const _events = new Map<string, () => void>();
+  /**
+   * Stop the timer and clear the interval
+   */
+  stop(): void {
+    if (this._interval) {
+      clearTimeout(this._interval)
+    }
+  }
 
-  function start(time?: number) {
-    stop();
+  /**
+   * Reset the timer to its default value and restart it
+   */
+  reset(): void {
+    const resetHandler = this._events.get("reset")
+    if (resetHandler) {
+      resetHandler()
+    }
+    this._timer = this._defaultTimer
+    this.stop()
+    this.start()
+  }
+
+  /**
+   * Start the countdown timer
+   * @param time - Optional time to set before starting
+   */
+  start(time?: number): void {
+    this.stop()
     if (time) {
-      setTimer(time);
+      this.setTimer(time)
     }
-    if (_timer === _defaultTimer && _events.get("secondsUpdated")) {
-      _events.get("secondsUpdated")!();
+    if (this._timer === this._defaultTimer) {
+      const secondsUpdatedHandler = this._events.get("secondsUpdated")
+      if (secondsUpdatedHandler) {
+        secondsUpdatedHandler()
+      }
     }
 
-    _interval = setTimeout(() => {
-      _timer -= 1;
-      if (_events.get("secondsUpdated")) {
-        _events.get("secondsUpdated")!();
+    this._interval = setTimeout(() => {
+      this._timer -= 1
+      const secondsUpdatedHandler = this._events.get("secondsUpdated")
+      if (secondsUpdatedHandler) {
+        secondsUpdatedHandler()
       }
-      if (_timer <= 0) {
-        stop();
-        if (_events.get("targetAchieved")) {
-          _events.get("targetAchieved")!();
+      if (this._timer <= 0) {
+        this.stop()
+        const targetAchievedHandler = this._events.get("targetAchieved")
+        if (targetAchievedHandler) {
+          targetAchievedHandler()
         }
       } else {
-        start();
+        this.start()
       }
-    }, 1000);
+    }, 1000)
   }
 
-  function stop() {
-    clearTimeout(_interval);
+  /**
+   * Register an event listener
+   * @param event - The event name (e.g., 'secondsUpdated', 'targetAchieved', 'reset')
+   * @param fn - The callback function
+   */
+  on(event: string, fn: () => void): void {
+    this._events.set(event, fn)
   }
 
-  function reset() {
-    if (_events.get("reset")) {
-      _events.get("reset")!();
+  /**
+   * Remove all event listeners
+   */
+  removeAllEventListeners(): void {
+    this._events.clear()
+  }
+
+  /**
+   * Get the current timer value
+   * @returns The current time in seconds
+   */
+  getTime(): number {
+    return this._timer
+  }
+
+  /**
+   * Custom JSON serialization - excludes non-serializable properties
+   * Only includes state data that can be safely serialized
+   */
+  toJSON() {
+    return {
+      _timer: this._timer,
+      _defaultTimer: this._defaultTimer,
     }
-    _timer = _defaultTimer;
-    stop();
-    start();
   }
-
-  function setTimer(time: number) {
-    _timer = time;
-    _defaultTimer = time;
-  }
-
-  function on(event: string, fn: () => void) {
-    _events.set(event, fn);
-  }
-
-  function removeAllEventListeners() {
-    _events.clear();
-  }
-
-  function getTime() {
-    return _timer;
-  }
-
-  return {
-    setTimer,
-    reset,
-    start,
-    on,
-    removeAllEventListeners,
-    stop,
-    getTime
-  };
 }
