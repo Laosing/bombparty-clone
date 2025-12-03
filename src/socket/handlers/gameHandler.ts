@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { nanoid } from "nanoid";
-import serialize from "serialize-javascript";
+import SuperJSON from "superjson";
 import pino from "pino";
 import { User, Room, Group, Message, Settings, RoomProps } from "../../types.js";
 import { Timer } from "../../Timer.js";
@@ -113,7 +113,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
         isPrivate: Boolean(rooms.get(room)?.get("private")),
       },
     ]);
-    io.emit("getRooms", serialize(roomsWithPrivate));
+    io.emit("getRooms", SuperJSON.serialize(roomsWithPrivate));
   }
 
   function getRoom(
@@ -151,7 +151,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   function relayRoom() {
     const { room } = getRoom();
     // Serialize handles maps and sets, which JSON.stringify doesn't
-    io.sockets.in(_roomId).emit("getRoom", serialize(room));
+    io.sockets.in(_roomId).emit("getRoom", SuperJSON.serialize(room));
   }
 
   // --- Game Logic ---
@@ -712,7 +712,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       .set("hardModeEnabled", hardModeEnabled)
       .set("letterBlendCounter", letterBlendCounter);
     if (data && userId) {
-      io.sockets.in(_roomId).emit("setSettings", serialize(settings));
+      io.sockets.in(_roomId).emit("setSettings", SuperJSON.serialize(settings));
       relayRoom();
 
       sendAdminMessage(userId, "changed the settings");
@@ -752,7 +752,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
 
   function relayMessages() {
     const { messages } = getRoom();
-    io.sockets.in(_roomId).emit("messages", serialize(messages));
+    io.sockets.in(_roomId).emit("messages", SuperJSON.serialize(messages));
   }
 
   // --- Connection/Disconnect Logic ---
