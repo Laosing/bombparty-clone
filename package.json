@@ -10,7 +10,7 @@
     "build": "cd client && bun install && bun build",
     "start": "bun src/server.ts",
     "deploy": "fly deploy --remote-only",
-    "test": "cd client && bun test"
+    "test": "bun test tests/ && cd client && bun run test"
   },
   "dependencies": {
     "nanoid": "^5.1.5",
