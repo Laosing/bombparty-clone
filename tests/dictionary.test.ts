@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { DictionaryService } from "../src/services/DictionaryService";
 
 describe("DictionaryService", () => {

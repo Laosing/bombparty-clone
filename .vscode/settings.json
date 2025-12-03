@@ -1,0 +1,9 @@
+{
+  "[typescript]": {
+    "editor.defaultFormatter": "oven.bun-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "oven.bun-vscode"
+  }
+}
