@@ -20,80 +20,49 @@ This is the frontend component of the Bombparty Clone game. It provides a real-t
 
 ### Prerequisites
 
-- Node.js 18 or higher
-- pnpm (or npm/yarn)
+- Bun (recommended) — for installing deps and running lightweight scripts
+- Node.js 18+ (optional)
 
 ### Installation
 
 ```bash
-# Install dependencies
-pnpm install
+# Install client dependencies
+cd client
+bun install
 ```
 
 ### Development
 
-Run the development server:
+Run the development server (Vite) for HMR and fast refresh:
 
 ```bash
-pnpm start
+cd client
+bun start
 ```
 
 The application will open at `http://localhost:3000` with hot module reloading enabled.
 
 ### Building
 
-Build for production:
+Build for production (uses Vite):
 
 ```bash
-pnpm build
+cd client
+bun run build
 ```
 
 The optimized build will be output to the `dist/` directory.
 
 ### Testing
 
-Run the test suite:
+Run the test suite (Vitest):
 
 ```bash
-# Run tests once
-pnpm test
+cd client
+bun test
 
-# Run tests in watch mode
-pnpm test -- --watch
-```
-
-## Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── Game.tsx        # Main game component
-│   ├── Home.tsx        # Home/lobby page
-│   ├── Room.tsx        # Room management
-│   ├── Players.tsx     # Player list display
-│   ├── Layout.tsx      # Layout wrapper
-│   └── ...
-├── hooks/              # Custom React hooks
-│   ├── useSocket.ts    # Socket.io connection
-│   ├── useRoom.ts      # Room state management
-│   ├── useStore.ts     # Zustand stores
-│   ├── useHowl.ts      # Audio management
-│   └── ...
-├── functions/          # Utility functions
-│   ├── session.ts      # Session utilities
-│   ├── deserialize.ts  # Data deserialization
-│   └── reset.ts        # Reset utilities
-├── constants/          # Constants
-│   └── constants.ts
-├── audio/              # Audio files
-├── images/             # Image assets and SVGs
-├── tests/              # Test utilities
-│   ├── setup.tsx       # Vitest setup
-│   ├── fixtures.ts     # Test data
-│   └── utils.tsx       # Test helpers
-├── App.tsx             # Root component
-├── App.scss            # Global styles
-└── index.tsx           # Entry point
+# Or run in watch mode via the test runner flags
+bun test -- --watch
 ```
 
 ## Key Features
@@ -164,10 +133,10 @@ The application follows WCAG 2.1 AA standards:
 To run the full application stack, run from the project root:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
-This will start both the frontend (port 3000) and backend (port 3001).
+This will start both the frontend (Vite, port 3000) and backend (Bun, port 8080).
 
 ### Hot Module Replacement
 
@@ -213,7 +182,7 @@ Ensure the backend server is running on the expected port and the `VITE_API_URL`
 Check bundle size with Vite's built-in analyzer:
 
 ```bash
-pnpm build -- --analyze
+bun run build
 ```
 
 ## Learning Resources
