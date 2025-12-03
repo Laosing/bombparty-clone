@@ -1,74 +1,76 @@
-#!/usr/bin/env node
-
 import { Server } from "socket.io";
-import http from "http";
-
-import { app } from "./app.js";
+import { Server as Engine } from "@socket.io/bun-engine";
 import game from "./socket/index.js";
-
 import { logger } from "./utils/logger.js";
 import { config } from "./config/env.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const port = normalizePort(config.port);
-app.set("port", port);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.join(__dirname, "..");
+const clientBuildPath = path.join(projectRoot, "client/build");
 
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-  pingTimeout: 60000,
-  maxHttpBufferSize: 1e8,
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
+const port = parseInt(config.port as string) || 3000;
+
+const io = new Server({
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+    },
+    pingTimeout: 60000,
+    maxHttpBufferSize: 1e8,
 });
+
+const engine = new Engine({
+    path: "/socket.io/",
+});
+
+io.bind(engine);
 game(io);
 
-httpServer.listen(port, () => {
-  logger.info(`Server started, listening on port ${port}!`);
+const { websocket, fetch: socketFetch } = engine.handler();
+
+Bun.serve({
+    port,
+    websocket,
+    async fetch(req, server) {
+        const url = new URL(req.url);
+
+        // Handle Socket.IO requests
+        if (url.pathname.startsWith("/socket.io")) {
+            return socketFetch(req, server);
+        }
+
+        // Serve static files from client/build
+        let filePath = path.join(clientBuildPath, url.pathname);
+        let file = Bun.file(filePath);
+
+        if (await file.exists()) {
+             // Handle directory request -> try index.html
+             // (Bun.file check doesn't distinguish dir vs file easily without stat, but let's assume direct mapping first)
+             // Actually, if it's a directory, file.exists() might be false depending on implementation or it might return the dir.
+             // But simpler check:
+             // If url ends with /, try index.html
+             if (url.pathname.endsWith("/")) {
+                 filePath = path.join(clientBuildPath, url.pathname, "index.html");
+                 file = Bun.file(filePath);
+             }
+        }
+
+        if (await file.exists()) {
+            return new Response(file);
+        }
+
+        // Fallback for SPA: serve index.html for non-API, non-socket requests that didn't match a file
+        // Exclude /api prefix if you have one (not in this project currently)
+        const indexFile = Bun.file(path.join(clientBuildPath, "index.html"));
+        if (await indexFile.exists()) {
+             return new Response(indexFile);
+        }
+
+        return new Response("Not Found", { status: 404 });
+    },
 });
-httpServer.on("error", onError);
-httpServer.on("listening", onListening);
 
-function normalizePort(val: string): number | string | boolean {
-  const port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
-
-  if (port >= 0) {
-    // port number
-    return port;
-  }
-
-  return false;
-}
-
-function onError(error: NodeJS.ErrnoException) {
-  if (error.syscall !== "listen") {
-    throw error;
-  }
-
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case "EACCES":
-      console.error(bind + " requires elevated privileges");
-      process.exit(1);
-      break;
-    case "EADDRINUSE":
-      console.error(bind + " is already in use");
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-}
-
-function onListening() {
-  const addr = httpServer.address();
-  const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr?.port;
-  logger.info("Listening on " + bind);
-}
+logger.info(`Server started, listening on port ${port}!`);

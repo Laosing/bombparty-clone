@@ -10,6 +10,7 @@ export const roomWithWinner = deserialize<any>(roomWithWinnerData)
 
 export const _roomId = "TEST"
 export const _userId = "l17oMihmvHzmZFYyVrSFo"
+// @ts-ignore
 const _socket = new MockedSocket()
 
 interface WrapperProps {

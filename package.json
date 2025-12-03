@@ -6,43 +6,21 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently 'tsx src/server.ts' 'cd client && pnpm install && pnpm start'",
-    "build": "tsc && cd client && pnpm install && pnpm build",
-    "start": "node dist/server.js",
+    "dev": "bun --watch src/server.ts & (cd client && bun install && bun start)",
+    "build": "cd client && bun install && bun build",
+    "start": "bun src/server.ts",
     "deploy": "fly deploy --remote-only",
-    "test": "cd client && pnpm test"
+    "test": "bun test tests/ && cd client && bun run test"
   },
   "dependencies": {
-    "better-sqlite3": "^12.5.0",
-    "concurrently": "^9.1.2",
-    "cookie-parser": "~1.4.4",
-    "cors": "^2.8.5",
-    "debug": "~4.4.0",
-    "dotenv": "^16.0.1",
-    "eslint": "^9.26.0",
-    "express": "~5.1.0",
-    "morgan": "~1.10.0",
     "nanoid": "^5.1.5",
-    "nodemon": "^3.1.10",
     "pino": "^9.6.0",
     "superjson": "^1.13.0",
-    "socket.io": "^4.8.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ]
+    "socket.io": "^4.8.1",
+    "@socket.io/bun-engine": "^0.0.1"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/morgan": "^1.9.10",
     "@types/node": "^24.10.1",
-    
-    "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "@types/bun": "latest"
   }
 }

@@ -50,8 +50,8 @@ Bombparty Clone is a fast-paced word game where players compete in real-time to 
 
 ### Prerequisites
 
-- Node.js 18 or higher
-- pnpm (or npm/yarn)
+- Bun (recommended) — for running the backend, installing deps, and tests
+- Node.js 18+ (only required if you run with Node instead of Bun)
 
 ### Installation
 
@@ -65,72 +65,44 @@ cd bombparty-clone
 2. Install dependencies
 
 ```bash
-pnpm install
+# Install root + client dependencies using Bun
+bun install
 ```
 
 ### Development
 
-Start both the backend and frontend in development mode:
+Start both the backend and frontend in development mode (uses Bun for the server and Vite for the client):
 
 ```bash
-pnpm dev
+# From project root
+bun run dev
 ```
 
 This will start:
 
-- **Backend** on `http://localhost:3001`
-- **Frontend** on `http://localhost:3000`
+- Backend on `http://localhost:8080`
+- Frontend on `http://localhost:3000`
 
 ### Building for Production
 
 ```bash
-# Build the entire project
-pnpm build
+# Build the client bundle
+cd client && bun run build
 
-# Build only the client
-cd client && pnpm build
-
-# Build only the server
-pnpm build:server
+# (Optional) Build any server artifacts if you use tsc or similar
+# For Bun-only runtime this may not be required; see package.json scripts
 ```
 
 ### Testing
 
-Run the test suite:
+Run the test suite using Bun for server tests and the client test runner as configured:
 
 ```bash
-# Run all tests
-pnpm test
+# Run client tests (uses Vitest/Vite config)
+cd client && bun test
 
-# Run tests in client only
-cd client && pnpm test
-
-# Run tests in watch mode
-cd client && pnpm test -- --watch
-```
-
-## Project Structure
-
-```
-bombparty-clone/
-├── client/                 # React frontend application
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── functions/     # Utility functions
-│   │   ├── constants/     # Constants and configuration
-│   │   ├── audio/         # Audio files
-│   │   └── tests/         # Test utilities and fixtures
-│   ├── index.html         # Entry point
-│   ├── vite.config.ts     # Vite configuration
-│   └── package.json
-├── app.ts                 # Express app setup
-├── game.ts                # Game logic and Socket.io handlers
-├── index.ts               # Server entry point
-├── Timer.ts               # Timer class
-├── types.ts               # TypeScript type definitions
-├── utils.ts               # Utility functions
-└── package.json
+# Run server tests (if any) with Bun
+bun run test
 ```
 
 ## How to Play
