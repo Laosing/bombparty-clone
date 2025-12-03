@@ -44,4 +44,12 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: "build",
+  },
+  test: {
+    globals: true,
+    environment: "happy-dom",
+    setupFiles: ["./src/tests/setup.ts"],
+  },
 })
