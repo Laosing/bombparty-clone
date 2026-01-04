@@ -1,19 +1,13 @@
-import React from "react"
-import OverlayTrigger from "react-bootstrap/OverlayTrigger"
-import Tooltip from "react-bootstrap/Tooltip"
+import React from "react";
 
 export const HardmodeTooltip = () => {
-  const renderTooltip = (props: any) => (
-    <Tooltip
-      id="hardMode-tooltip"
-      {...props}
-    >
-      Randomizes the bomb timer (subtracts a random number between 0 - timer/2)
-    </Tooltip>
-  )
-  return (
-    <OverlayTrigger overlay={renderTooltip}>
-      <span style={{ width: "fit-content" }}>ℹ️</span>
-    </OverlayTrigger>
-  )
-}
+	return (
+		<div className="tooltip tooltip-top">
+			<div className="tooltip-content w-48">
+				Randomizes the bomb timer (subtracts a random number between 0 -
+				timer/2)
+			</div>
+			<span className="cursor-help opacity-70">ℹ️</span>
+		</div>
+	);
+};

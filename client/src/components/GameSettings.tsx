@@ -1,169 +1,179 @@
-import React, { useEffect, useState } from "react"
-import Button from "react-bootstrap/Button"
-import Form from "react-bootstrap/Form"
-import Row from "react-bootstrap/Row"
-import Stack from "react-bootstrap/Stack"
-import { deserialize } from "functions/deserialize"
-import { useSocket } from "hooks/useSocket"
-import { useRoom } from "hooks/useRoom"
-import { HardmodeTooltip } from "components/HardmodeTooltip"
-import { isDevEnv } from "functions/session"
-import { User } from "types/index"
+import React, { useEffect, useState } from "react";
+import { deserialize } from "functions/deserialize";
+import { useSocket } from "hooks/useSocket";
+import { useRoom } from "hooks/useRoom";
+import { HardmodeTooltip } from "components/HardmodeTooltip";
+import { isDevEnv } from "functions/session";
+import { User } from "types/index";
 
 export function GameSettings() {
-  const { socket, userId } = useSocket()
-  const { room } = useRoom()
+	const { socket, userId } = useSocket();
+	const { room } = useRoom();
 
-  const users = room.get("users") as Map<string, User>
-  const running = room.get("running")
-  const isCountDown = room.get("isCountDown")
-  const settings = room.get("settings")
-  const lives = settings.get("lives")
-  const timer = settings.get("timer")
-  const letterBlendCounter = settings.get("letterBlendCounter")
-  const hardMode = settings.get("hardMode")
-  const hardModeEnabled = settings.get("hardModeEnabled")
+	const users = room.get("users") as Map<string, User>;
+	const running = room.get("running");
+	const isCountDown = room.get("isCountDown");
+	const settings = room.get("settings");
+	const lives = settings.get("lives");
+	const timer = settings.get("timer");
+	const letterBlendCounter = settings.get("letterBlendCounter");
+	const hardMode = settings.get("hardMode");
+	const hardModeEnabled = settings.get("hardModeEnabled");
 
-  const canEditSettings = !Boolean(
-    Array.from(users).find(([id, val]) => val.inGame && id === userId)
-  )
+	const canEditSettings = !Boolean(
+		Array.from(users).find(([id, val]) => val.inGame && id === userId),
+	);
 
-  const disabled = running || canEditSettings || isCountDown
+	const disabled = running || canEditSettings || isCountDown;
 
-  const submitForm = (e: React.FormEvent<HTMLFormElement>) => {
-    if (disabled) return
-    e.preventDefault()
-    var formData = new FormData(e.currentTarget)
-    const lives = formData.get("lives")
-    const timer = formData.get("timer")
-    const letterBlendCounter = formData.get("letterBlendCounter")
-    const hardMode = formData.get("hardMode")
-    const hardModeEnabled = Boolean(formData.get("hardModeEnabled"))
-    const data = { lives, timer, letterBlendCounter, hardMode, hardModeEnabled }
-    socket.emit("setSettings", data, userId)
-  }
+	const submitForm = (e: React.FormEvent<HTMLFormElement>) => {
+		if (disabled) return;
+		e.preventDefault();
+		var formData = new FormData(e.currentTarget);
+		const lives = formData.get("lives");
+		const timer = formData.get("timer");
+		const letterBlendCounter = formData.get("letterBlendCounter");
+		const hardMode = formData.get("hardMode");
+		const hardModeEnabled = Boolean(formData.get("hardModeEnabled"));
+		const data = {
+			lives,
+			timer,
+			letterBlendCounter,
+			hardMode,
+			hardModeEnabled,
+		};
+		socket.emit("setSettings", data, userId);
+	};
 
-  const [notification, setNotification] = useState(false)
+	const [notification, setNotification] = useState(false);
 
-  const [timerValue, setTimerValue] = useState(timer)
-  const [livesValue, setLivesValue] = useState(lives)
-  const [lettersValue, setLettersValue] = useState(letterBlendCounter)
-  const [hardModeValue, setHardModeValue] = useState(hardMode)
-  const [hardModeToggle, setHardModeToggle] = useState(hardModeEnabled)
+	const [timerValue, setTimerValue] = useState(timer);
+	const [livesValue, setLivesValue] = useState(lives);
+	const [lettersValue, setLettersValue] = useState(letterBlendCounter);
+	const [hardModeValue, setHardModeValue] = useState(hardMode);
+	const [hardModeToggle, setHardModeToggle] = useState(hardModeEnabled);
 
-  useEffect(() => {
-    const triggerValidation = (val: string) => {
-      const deserializedVal = deserialize<Map<string, any>>(val)
-      setTimerValue(deserializedVal.get("timer"))
-      setLivesValue(deserializedVal.get("lives"))
-      setLettersValue(deserializedVal.get("letterBlendCounter"))
-      setHardModeToggle(deserializedVal.get("hardModeEnabled"))
-      setNotification(Boolean(deserializedVal))
-      setTimeout(() => setNotification(false), 500)
-    }
+	useEffect(() => {
+		const triggerValidation = (val: string) => {
+			const deserializedVal = deserialize<Map<string, any>>(val);
+			setTimerValue(deserializedVal.get("timer"));
+			setLivesValue(deserializedVal.get("lives"));
+			setLettersValue(deserializedVal.get("letterBlendCounter"));
+			setHardModeToggle(deserializedVal.get("hardModeEnabled"));
+			setNotification(Boolean(deserializedVal));
+			setTimeout(() => setNotification(false), 500);
+		};
 
-    socket.on("setSettings", triggerValidation)
-    return () => {
-      socket.off("setSettings", triggerValidation)
-    }
-  }, [socket])
+		socket.on("setSettings", triggerValidation);
+		return () => {
+			socket.off("setSettings", triggerValidation);
+		};
+	}, [socket]);
 
-  return (
-    <>
-      <Form
-        onSubmit={submitForm}
-        className="p-3"
-      >
-        <Row>
-          <Stack gap={2}>
-            <Form.Group controlId="timer">
-              <Form.Label className="mb-0">
-                Timer: <strong>{timerValue}s</strong>
-              </Form.Label>
-              <Form.Range
-                key={`form-timer-${timer}`}
-                name="timer"
-                defaultValue={String(timer)}
-                min={isDevEnv ? "1" : "10"}
-                max="59"
-                step="1"
-                disabled={disabled}
-                onChange={(e) => setTimerValue(e.target.value)}
-              />
-            </Form.Group>
-            <Form.Group controlId="lives">
-              <Form.Label className="mb-0">
-                Lives: <strong>{livesValue}</strong>
-              </Form.Label>
-              <Form.Range
-                key={`form-lives-${lives}`}
-                name="lives"
-                defaultValue={lives}
-                min="1"
-                max="10"
-                step="1"
-                disabled={disabled}
-                onChange={(e) => setLivesValue(e.target.value)}
-              />
-            </Form.Group>
-            <Form.Group controlId="letterBlendCounter">
-              <Form.Label className="mb-0">
-                Change letters after <strong>{lettersValue}</strong> turns
-              </Form.Label>
-              <Form.Range
-                key={`form-letterBlendCounter-${letterBlendCounter}`}
-                name="letterBlendCounter"
-                defaultValue={letterBlendCounter}
-                min="1"
-                max="10"
-                step="1"
-                disabled={disabled}
-                onChange={(e) => setLettersValue(e.target.value)}
-              />
-            </Form.Group>
-            <Form.Group controlId="hardMode">
-              <Form.Check
-                type="switch"
-                checked={Boolean(hardModeToggle)}
-                onChange={() => setHardModeToggle((p: boolean) => !p)}
-                label=""
-                className="d-inline-block"
-                name="hardModeEnabled"
-                id="hardModeEnabled"
-                disabled={disabled}
-              />
-              <Form.Label
-                className="mb-0"
-                style={{ opacity: hardModeToggle ? 1 : 0.5 }}
-              >
-                Hard mode after <strong>{hardModeValue}</strong> rounds{" "}
-                <HardmodeTooltip />
-              </Form.Label>
-              <Form.Range
-                key={`form-hardMode-${hardMode}`}
-                name="hardMode"
-                defaultValue={hardMode}
-                min="1"
-                max="10"
-                step="1"
-                disabled={disabled || !hardModeToggle}
-                onChange={(e) => setHardModeValue(e.target.value)}
-              />
-            </Form.Group>
-            <div className="d-flex align-items-end">
-              <Button
-                type="submit"
-                variant={notification ? "success" : "secondary"}
-                className="w-100"
-                disabled={disabled}
-                size="sm"
-              >
-                {notification ? "Updated!" : "Change settings"}
-              </Button>
-            </div>
-          </Stack>
-        </Row>
-      </Form>
-    </>
-  )
+	return (
+		<form onSubmit={submitForm} className="p-4 flex flex-col gap-1">
+			<div className="form-control w-full">
+				<label className="label py-1" htmlFor="timer">
+					<span className="label-text">
+						Timer: <strong>{timerValue}s</strong>
+					</span>
+				</label>
+				<input
+					type="range"
+					id="timer"
+					name="timer"
+					min={isDevEnv ? 1 : 10}
+					max={59}
+					step={1}
+					value={timerValue}
+					disabled={disabled}
+					onChange={(e) => setTimerValue(Number(e.target.value))}
+					className="range range-primary range-xs"
+				/>
+			</div>
+
+			<div className="form-control w-full">
+				<label className="label py-1" htmlFor="lives">
+					<span className="label-text">
+						Lives: <strong>{livesValue}</strong>
+					</span>
+				</label>
+				<input
+					type="range"
+					id="lives"
+					name="lives"
+					min={1}
+					max={10}
+					step={1}
+					value={livesValue}
+					disabled={disabled}
+					onChange={(e) => setLivesValue(Number(e.target.value))}
+					className="range range-primary range-xs"
+				/>
+			</div>
+
+			<div className="form-control w-full">
+				<label className="label py-1" htmlFor="letterBlendCounter">
+					<span className="label-text">
+						Change letters after <strong>{lettersValue}</strong> turns
+					</span>
+				</label>
+				<input
+					type="range"
+					id="letterBlendCounter"
+					name="letterBlendCounter"
+					min={1}
+					max={10}
+					step={1}
+					value={lettersValue}
+					disabled={disabled}
+					onChange={(e) => setLettersValue(Number(e.target.value))}
+					className="range range-primary range-xs"
+				/>
+			</div>
+
+			<div className="form-control w-full">
+				<label
+					className="label cursor-pointer justify-start gap-4 mb-2 flex-wrap"
+					htmlFor="hardModeEnabled"
+				>
+					<input
+						type="checkbox"
+						className="toggle toggle-primary toggle-sm"
+						checked={Boolean(hardModeToggle)}
+						onChange={() => setHardModeToggle((p: boolean) => !p)}
+						name="hardModeEnabled"
+						id="hardModeEnabled"
+						disabled={disabled}
+					/>
+					<span
+						className={`label-text transition-opacity ${hardModeToggle ? "opacity-100" : "opacity-50"}`}
+					>
+						Hard mode after <strong>{hardModeValue}</strong> rounds{" "}
+						<HardmodeTooltip />
+					</span>
+				</label>
+
+				<input
+					type="range"
+					name="hardMode"
+					min={1}
+					max={10}
+					step={1}
+					value={hardModeValue}
+					disabled={disabled || !hardModeToggle}
+					onChange={(e) => setHardModeValue(Number(e.target.value))}
+					className={`range range-primary range-xs transition-opacity ${hardModeToggle ? "opacity-100" : "opacity-30"}`}
+				/>
+			</div>
+
+			<button
+				type="submit"
+				className={`btn btn-sm w-full mt-2 ${notification ? "btn-success" : "btn-neutral"}`}
+				disabled={disabled}
+			>
+				{notification ? "Updated!" : "Change settings"}
+			</button>
+		</form>
+	);
 }

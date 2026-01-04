@@ -1,4 +1,3 @@
-import React from "react"
-import clsx from "clsx"
+import React from "react";
 
-export const Hr = () => <hr className={clsx("hr m-0")} />
+export const Hr = () => <hr className="border-base-300 m-0" />;

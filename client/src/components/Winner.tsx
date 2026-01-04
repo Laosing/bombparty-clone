@@ -1,108 +1,100 @@
-import React from "react"
-import Row from "react-bootstrap/Row"
-import Col from "react-bootstrap/Col"
-import Badge from "react-bootstrap/Badge"
-import confetti from "canvas-confetti"
-import { useRoom } from "hooks/useRoom"
-import { Highlight } from "components/Highlight"
-import { Avatar } from "components/Avatar"
-import { Group, User } from "types/index"
+import React from "react";
+import confetti from "canvas-confetti";
+import { useRoom } from "hooks/useRoom";
+import { Highlight } from "components/Highlight";
+import { Avatar } from "components/Avatar";
+import type { Group, User } from "types/index";
+import clsx from "clsx";
 
 interface WinnerProps {
-    winner: Group;
+	winner: Group;
 }
 
 export function Winner({ winner }: WinnerProps) {
-  const { room } = useRoom()
-  const users = room.get("users") as Map<string, User>
-  const round = room.get("round")
-  const hardMode = room.get("hardMode")
-  const roomLetterBlendWord = room.get("letterBlendWord")
-  const roomLetterBlend = room.get("letterBlend")
+	const { room } = useRoom();
+	const users = room.get("users") as Map<string, User>;
+	const round = room.get("round");
+	const hardMode = room.get("hardMode");
+	const roomLetterBlendWord = room.get("letterBlendWord");
+	const roomLetterBlend = room.get("letterBlend");
 
-  const ref = React.useRef<HTMLElement | null>(null)
-  const refCallback = React.useCallback((node: HTMLElement | null) => {
-    if (ref.current) {
-      confetti.reset()
-    }
-    if (node) {
-      var rect = node.getBoundingClientRect()
-      confetti({
-        disableForReducedMotion: true,
-        origin: {
-          x: (rect.left + rect.width / 2) / window.innerWidth,
-          y: (rect.top + rect.height / 2) / window.innerHeight,
-        },
-        particleCount: 50,
-        startVelocity: 30,
-        spread: 270,
-      })
-    }
-    ref.current = node
-  }, [])
+	const ref = React.useRef<HTMLElement | null>(null);
+	const refCallback = React.useCallback((node: HTMLElement | null) => {
+		if (ref.current) {
+			confetti.reset();
+		}
+		if (node) {
+			const rect = node.getBoundingClientRect();
+			confetti({
+				disableForReducedMotion: true,
+				origin: {
+					x: (rect.left + rect.width / 2) / window.innerWidth,
+					y: (rect.top + rect.height / 2) / window.innerHeight,
+				},
+				particleCount: 50,
+				startVelocity: 30,
+				spread: 270,
+			});
+		}
+		ref.current = node;
+	}, []);
 
-  return (
-    <div>
-      <div className="mt-2 animate__animated animate__bounceIn">
-        <h3
-          className="mb-3"
-          ref={refCallback}
-        >
-          {`Winner${winner.members.size === 1 ? "" : "s"}! `}
-          <Badge
-            bg={hardMode ? "danger" : "primary"}
-            style={{ fontSize: ".5em" }}
-          >
-            Round {round}
-          </Badge>
-        </h3>
+	return (
+		<div className="mt-8 animate-bounce-in text-center">
+			<div className="flex flex-col items-center justify-center gap-4 mb-6">
+				<h3
+					ref={refCallback}
+					className="text-4xl font-black flex items-center gap-3"
+				>
+					{`Winner${winner.members.size === 1 ? "" : "s"}! `}
+					<span
+						className={clsx(
+							"badge badge-lg",
+							hardMode ? "badge-error font-bold" : "badge-primary font-bold",
+						)}
+					>
+						Round {round}
+					</span>
+				</h3>
+			</div>
 
-        <Row className="justify-content-center align-items-center">
-          {[...winner.members].map((userId) => {
-              const user = users.get(userId)
-              if (!user) return null
-              return (
-                <Col
-                  key={user.id}
-                  className="col-auto"
-                >
-                  <div className="mb-3">
-                    <Avatar
-                      className="animate__animated animate__infinite animate__pulse animate__slow w-100"
-                      style={{ maxWidth: "150px", marginBottom: "-.5em" }}
-                      id={user.avatar}
-                    />
-                    <div
-                      className="h4"
-                      style={{
-                        fontSize: winner.members.size === 1 ? "2em" : "1em",
-                      }}
-                      data-testid="winner-name"
-                    >
-                      {user.name}
-                    </div>
-                  </div>
-                </Col>
-              )
-          })}
-        </Row>
+			<div className="flex flex-wrap justify-center items-end gap-8 mb-8">
+				{[...winner.members].map((userId) => {
+					const user = users.get(userId);
+					if (!user) return null;
+					return (
+						<div key={user.id} className="flex flex-col items-center gap-4">
+							<div className="w-40 h-40 animate-pulse-slow">
+								<Avatar id={user.avatar} />
+							</div>
+							<div
+								className={clsx(
+									"font-black tracking-tight",
+									winner.members.size === 1 ? "text-4xl" : "text-xl",
+								)}
+								data-testid="winner-name"
+							>
+								{user.name}
+							</div>
+						</div>
+					);
+				})}
+			</div>
 
-        {roomLetterBlendWord && (
-          <div className="mb-4">
-            <strong>Last word:</strong>{" "}
-            <Badge
-              data-testid="last-word"
-              bg="secondary"
-              style={{ fontSize: "1em" }}
-            >
-              <Highlight
-                searchWords={[roomLetterBlend?.toUpperCase()]}
-                textToHighlight={roomLetterBlendWord?.toUpperCase()}
-              />
-            </Badge>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+			{roomLetterBlendWord && (
+				<div className="bg-base-200 p-6 rounded-3xl inline-block border border-base-300 shadow-sm mx-auto">
+					<span className="opacity-50 text-xs block mb-1 uppercase tracking-widest font-bold">
+						Last word
+					</span>
+					<span className="text-3xl font-black mb-0" data-testid="last-word">
+						<Highlight
+							searchWords={[roomLetterBlend?.toUpperCase()]}
+							textToHighlight={roomLetterBlendWord?.toUpperCase()}
+							highlightClassName="text-error"
+						/>
+					</span>
+				</div>
+			)}
+		</div>
+	);
 }

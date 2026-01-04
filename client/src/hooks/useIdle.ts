@@ -1,41 +1,56 @@
 import React, { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { toast, Id } from "react-toastify"
-import createActivityDetector from "activity-detector"
+import { toast, type Id } from "react-toastify"
+
+const IDLE_TIME = 1000 * 5 * 60 // 5 minutes
+const REDIRECT_TIME = 1000 * 30 // 30 seconds
 
 export const useIdle = (): void => {
-  const timeout = React.useRef<NodeJS.Timeout | undefined>(undefined)
+  const idleTimeout = React.useRef<NodeJS.Timeout | undefined>(undefined)
+  const redirectTimeout = React.useRef<NodeJS.Timeout | undefined>(undefined)
   const toastId = React.useRef<Id | undefined>(undefined)
   const navigate = useNavigate()
 
-  const activityDetector = React.useMemo(() => {
-    const detector = createActivityDetector({
-      timeToIdle: 1000 * 60 * 5,
-      inactivityEvents: []
+  const warning =
+    "You there? If not you will be redirected to the homepage in 30 seconds."
+
+  const handleIdle = React.useCallback(() => {
+    toastId.current = toast.warn(warning, {
+      onOpen: () => {
+        redirectTimeout.current = setTimeout(() => {
+          navigate("/")
+          if (toastId.current) toast.dismiss(toastId.current)
+        }, REDIRECT_TIME)
+      },
+      toastId: "idle-toast"
     })
-    const warning =
-      "You there? If not you will be redirected to the homepage in 30 seconds."
-    const onOpen = () => {
-      timeout.current = setTimeout(() => {
-        navigate("/")
-        if (toastId.current) toast.dismiss(toastId.current)
-      }, 1000 * 30)
-    }
-
-    const onIdle = () => {
-      toastId.current = toast.warn(warning, { onOpen, toastId: "idle-toast" })
-    }
-    const onActive = () => {
-      if (timeout.current) clearTimeout(timeout.current)
-      if (toastId.current) toast.dismiss(toastId.current)
-    }
-    detector.on("idle", onIdle)
-    detector.on("active", onActive)
-
-    return detector
   }, [navigate])
 
+  const resetTimers = React.useCallback(() => {
+    if (idleTimeout.current) clearTimeout(idleTimeout.current)
+    if (redirectTimeout.current) clearTimeout(redirectTimeout.current)
+    if (toastId.current) toast.dismiss(toastId.current)
+
+    idleTimeout.current = setTimeout(handleIdle, IDLE_TIME)
+  }, [handleIdle])
+
   useEffect(() => {
-    return () => activityDetector.stop()
-  }, [activityDetector])
+    const events = ["mousemove", "keydown", "scroll", "touchstart", "click"]
+    
+    const activityHandler = () => resetTimers()
+
+    events.forEach(event => {
+      window.addEventListener(event, activityHandler)
+    })
+
+    idleTimeout.current = setTimeout(handleIdle, IDLE_TIME)
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, activityHandler)
+      })
+      if (idleTimeout.current) clearTimeout(idleTimeout.current)
+      if (redirectTimeout.current) clearTimeout(redirectTimeout.current)
+    }
+  }, [handleIdle, resetTimers])
 }

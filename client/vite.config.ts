@@ -1,11 +1,13 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import svgr from "vite-plugin-svgr"
+import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     svgr({
       svgrOptions: {
         exportType: "named",
@@ -31,18 +33,6 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        silenceDeprecations: [
-          "mixed-decls",
-          "color-functions",
-          "global-builtin",
-          "import",
-        ],
-      },
-    },
   },
   build: {
     outDir: "dist",

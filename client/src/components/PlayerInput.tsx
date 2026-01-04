@@ -1,131 +1,117 @@
-import React, { useEffect, useState, useDeferredValue } from "react"
-import Form from "react-bootstrap/Form"
-import Badge from "react-bootstrap/Badge"
-import clsx from "clsx"
-import { LETTER_BONUS } from "constants/constants"
-import { useSocket } from "hooks/useSocket"
-import { useRoom } from "hooks/useRoom"
-import { useWordValidation, useEventTimeout } from "hooks/useEventTimeout"
-import { Group } from "types/index"
+import { useEffect, useState, useDeferredValue } from "react";
+import clsx from "clsx";
+import { LETTER_BONUS } from "constants/constants";
+import { useSocket } from "hooks/useSocket";
+import { useRoom } from "hooks/useRoom";
+import { useWordValidation, useEventTimeout } from "hooks/useEventTimeout";
+import type { Group } from "types/index";
 
 export function PlayerInput() {
-  const { socket, userId } = useSocket()
-  const { room } = useRoom()
+	const { socket, userId } = useSocket();
+	const { room } = useRoom();
 
-  const [value, setValue] = useState("")
-  const deferredValue = useDeferredValue(value)
+	const [value, setValue] = useState("");
+	const deferredValue = useDeferredValue(value);
 
-  const validation = useWordValidation(500)
+	const validation = useWordValidation(500);
 
-  const [bonusLetter] = useEventTimeout<string>("bonusLetter", "", 1000)
+	const [bonusLetter] = useEventTimeout<string>("bonusLetter", "", 1000);
 
-  const currentGroup = room.get("currentGroup")
-  const groups = room.get("groups")
+	const currentGroup = room.get("currentGroup");
+	const groups = room.get("groups");
 
-  const group = groups.get(currentGroup) as Group | undefined
-  const isCurrentGroup = group?.members?.has?.(userId || "")
-  const index = [...(group?.members || [])].findIndex((id) => id === userId)
-  const isActiveTyper = group && (group.activeTyper % group.members.size) === index
+	const group = groups.get(currentGroup) as Group | undefined;
+	const isCurrentGroup = group?.members?.has?.(userId || "");
+	const index = [...(group?.members || [])].findIndex((id) => id === userId);
+	const isActiveTyper =
+		group && group.activeTyper % group.members.size === index;
 
-  const submitForm = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    socket.emit("checkWord", value, currentGroup)
-    e.currentTarget.reset()
-  }
+	const submitForm = (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		socket.emit("checkWord", value, currentGroup);
+		e.currentTarget.reset();
+	};
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.toLowerCase()
-    setValue(val)
-    socket.emit("setGlobalInputText", val)
-  }
+	const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const val = e.target.value.toLowerCase();
+		setValue(val);
+		socket.emit("setGlobalInputText", val);
+	};
 
-  const color =
-    validation.isValid === false
-      ? "animate__animated animate__shakeX animate__faster border-danger"
-      : validation.isValid
-      ? "border-success"
-      : ""
+	const color =
+		validation.isValid === false
+			? "input-error animate-shake"
+			: validation.isValid
+				? "input-success"
+				: "";
 
-  const errorReason =
-    validation.isUnique === false
-      ? "Already used!"
-      : validation.isDictionary === false
-      ? "Not in my dictionary!"
-      : validation.isBlend === false
-      ? "Missing the letters above"
-      : ""
+	const errorReason =
+		validation.isUnique === false
+			? "Already used!"
+			: validation.isDictionary === false
+				? "Not in my dictionary!"
+				: validation.isBlend === false
+					? "Missing the letters above"
+					: "";
 
-  useEffect(() => {
-    setValue("")
-    socket.emit("setGlobalInputText", "")
-  }, [currentGroup, isActiveTyper, socket])
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Reset input when player changes
+	useEffect(() => {
+		setValue("");
+		socket.emit("setGlobalInputText", "");
+	}, [currentGroup, isActiveTyper, socket]);
 
-  useEffect(() => {
-    const setGlobalInputText = (val: string) => setValue(val)
-    socket.on("setGlobalInputText", setGlobalInputText)
-    return () => {
-      socket.off("setGlobalInputText", setGlobalInputText)
-    }
-  }, [socket])
+	useEffect(() => {
+		const setGlobalInputText = (val: string) => setValue(val);
+		socket.on("setGlobalInputText", setGlobalInputText);
+		return () => {
+			socket.off("setGlobalInputText", setGlobalInputText);
+		};
+	}, [socket]);
 
-  const inputProps = {
-    disabled: !isCurrentGroup || !isActiveTyper,
-    ...((!isCurrentGroup || !isActiveTyper) && { value: deferredValue }),
-    ...(isCurrentGroup && isActiveTyper && { onChange: onChange }),
-  }
+	const inputProps = {
+		disabled: !isCurrentGroup || !isActiveTyper,
+		...((!isCurrentGroup || !isActiveTyper) && { value: deferredValue }),
+		...(isCurrentGroup && isActiveTyper && { onChange: onChange }),
+	};
 
-  return (
-    <>
-      <Form
-        onSubmit={submitForm}
-        className="d-flex justify-content-center mt-1 mb-2 flex-column m-auto position-relative"
-        style={{ maxWidth: "20em" }}
-      >
-        <Form.Control
-          className={clsx(color)}
-          key={`${currentGroup}_${isActiveTyper}`}
-          autoFocus
-          {...inputProps}
-        />
-        {deferredValue && (
-          <Badge
-            bg={
-              deferredValue.length > LETTER_BONUS
-                ? "warning text-dark"
-                : "secondary"
-            }
-            className="position-absolute top-50 end-0 translate-middle-y me-2"
-          >
-            {deferredValue.length}
-          </Badge>
-        )}
-        {bonusLetter && (
-          <Badge
-            bg="warning text-dark"
-            className="position-absolute top-100 start-50"
-            style={{
-              transform: "translate(-50%, -50%)",
-              zIndex: 20,
-              fontSize: "1em",
-            }}
-          >
-            {bonusLetter.toUpperCase()}
-          </Badge>
-        )}
-        {errorReason && (
-          <Badge
-            bg="danger"
-            className="position-absolute top-100 start-50"
-            style={{
-              transform: "translate(-50%, -50%)",
-              zIndex: 20,
-              fontSize: "1em",
-            }}
-          >
-            {errorReason}
-          </Badge>
-        )}
-      </Form>
-    </>
-  )
+	return (
+		<form
+			onSubmit={submitForm}
+			className="relative flex flex-col items-center w-full max-w-[20rem] mx-auto mt-1 mb-2"
+		>
+			<input
+				className={clsx(
+					"input input-bordered w-full text-center text-2xl font-bold uppercase",
+					color,
+				)}
+				key={`${currentGroup}_${isActiveTyper}`}
+				// biome-ignore lint/a11y/noAutofocus: Game input needs focus
+				autoFocus
+				{...inputProps}
+				type="text"
+			/>
+			{deferredValue && (
+				<span
+					className={clsx(
+						"badge absolute right-3 top-1/2 -translate-y-1/2 font-bold",
+						deferredValue.length > LETTER_BONUS
+							? "badge-warning"
+							: "badge-ghost opacity-60",
+					)}
+				>
+					{deferredValue.length}
+				</span>
+			)}
+			{bonusLetter && (
+				<span className="badge badge-warning absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 text-lg py-3 px-4 shadow-md font-bold">
+					{bonusLetter.toUpperCase()}
+				</span>
+			)}
+			{errorReason && !bonusLetter && (
+				<span className="badge badge-error absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 text-sm py-2 px-4 shadow-md font-bold whitespace-nowrap">
+					{errorReason}
+				</span>
+			)}
+		</form>
+	);
 }

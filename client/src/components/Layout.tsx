@@ -1,21 +1,24 @@
-import React from "react"
-import Container, { ContainerProps } from "react-bootstrap/Container"
-import clsx from "clsx"
+import React from "react";
+import clsx from "clsx";
 
-interface LayoutProps extends ContainerProps {
-    children: React.ReactNode;
+interface LayoutProps {
+	children: React.ReactNode;
+	className?: string;
 }
 
 export const Layout = ({ children, className, ...props }: LayoutProps) => {
-  return (
-    <Container
-      className={clsx("my-lg-5 mt-3 mb-5 text-center", className)}
-      {...props}
-    >
-      {children}
-    </Container>
-  )
-}
+	return (
+		<div
+			className={clsx(
+				"container mx-auto px-4 lg:my-10 mt-3 mb-10 text-center",
+				className,
+			)}
+			{...props}
+		>
+			{children}
+		</div>
+	);
+};
 export const LayoutWithHeader = ({ children, ...props }: LayoutProps) => (
-  <Layout {...props}>{children}</Layout>
-)
+	<Layout {...props}>{children}</Layout>
+);

@@ -1,43 +1,40 @@
-import React from "react"
-import Button from "react-bootstrap/Button"
-import { getRandomName } from "functions/session"
-import { useGameStore } from "hooks/useStore"
-import { useSocket } from "hooks/useSocket"
+import React from "react";
+import { getRandomName } from "functions/session";
+import { useGameStore } from "hooks/useStore";
+import { useSocket } from "hooks/useSocket";
 
 export function EditName() {
-  const { socket } = useSocket()
+	const { socket } = useSocket();
 
-  const name = useGameStore((state) => state.name)
-  const setName = useGameStore((state) => state.setName)
-  const userId = useGameStore((state) => state.userId)
+	const name = useGameStore((state) => state.name);
+	const setName = useGameStore((state) => state.setName);
+	const userId = useGameStore((state) => state.userId);
 
-  const editName = () => {
-    const namePrompt = window.prompt(
-      "Name: (over 30 characters or blank will generate a random name)"
-    )
-    if (namePrompt !== null) {
-      const validName = namePrompt.trim().length < 30 && namePrompt.trim()
-      const newName = validName ? namePrompt.trim() : getRandomName()
-      setName(newName)
-      socket.emit("updateName", newName, userId)
-    }
-  }
+	const editName = () => {
+		const namePrompt = window.prompt(
+			"Name: (over 30 characters or blank will generate a random name)",
+		);
+		if (namePrompt !== null) {
+			const validName = namePrompt.trim().length < 30 && namePrompt.trim();
+			const newName = validName ? namePrompt.trim() : getRandomName();
+			setName(newName);
+			socket.emit("updateName", newName, userId);
+		}
+	};
 
-  return (
-    <div className="h5 mb-0 d-flex justify-content-center align-items-center">
-      <div className="position-relative">
-        {name}
-        <Button
-          style={{ transform: "translate(0, -50%)" }}
-          className="text-decoration-none position-absolute top-50 start-100"
-          onClick={editName}
-          size="sm"
-          variant="link"
-          title="Edit name"
-        >
-          ✏️
-        </Button>
-      </div>
-    </div>
-  )
+	return (
+		<div className="text-xl font-bold flex justify-center items-center">
+			<div className="relative group">
+				{name}
+				<button
+					className="btn btn-ghost btn-xs btn-circle ml-2"
+					onClick={editName}
+					title="Edit name"
+					type="button"
+				>
+					✏️
+				</button>
+			</div>
+		</div>
+	);
 }

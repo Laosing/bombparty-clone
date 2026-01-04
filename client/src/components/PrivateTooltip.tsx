@@ -1,19 +1,10 @@
-import React from "react"
-import OverlayTrigger from "react-bootstrap/OverlayTrigger"
-import Tooltip from "react-bootstrap/Tooltip"
+import React from "react";
 
-export const PrivateTooltip = () => {
-  const renderTooltip = (props: any) => (
-    <Tooltip
-      id="private-tooltip"
-      {...props}
-    >
-      This room is private
-    </Tooltip>
-  )
-  return (
-    <OverlayTrigger overlay={renderTooltip}>
-      <span>🔒</span>
-    </OverlayTrigger>
-  )
-}
+export const PrivateTooltip = () => (
+	<div
+		className="tooltip tooltip-right inline-block"
+		data-tip="This room is private"
+	>
+		<span>🔒</span>
+	</div>
+);
