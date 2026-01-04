@@ -58,7 +58,7 @@ export function AudioSettings() {
 						<label className="label cursor-pointer justify-start gap-4">
 							<input
 								type="checkbox"
-								className="toggle toggle-secondary"
+								className="toggle toggle-primary"
 								checked={theme === "dark"}
 								onChange={switchTheme}
 							/>
