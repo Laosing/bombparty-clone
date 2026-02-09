@@ -37,7 +37,7 @@ export function Room() {
   return (
     <div
       className={clsx(
-        "flex flex-col lg:flex-row min-h-screen lg:h-screen lg:overflow-hidden bg-base-100",
+        "flex flex-col lg:flex-row min-h-screen bg-base-100",
         theme,
       )}
     >
@@ -55,13 +55,13 @@ export function Room() {
       {/* Main Game Area */}
       <main className="flex-1 relative flex flex-col min-h-0 lg:overflow-y-auto">
         <GithubLink />
-        <div className="flex-1 flex flex-col items-center justify-center p-4 min-h-[300px] lg:min-h-0">
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
           <Game />
         </div>
       </main>
 
       {/* Sidebar Area */}
-      <aside className="w-full lg:w-96 flex flex-col bg-base-200 border-l border-base-300 lg:overflow-hidden shrink-0">
+      <aside className="w-full lg:w-96 lg:max-h-screen flex flex-col bg-base-200 border-l border-base-300 shrink-0">
         <div className="px-4">
           <AvatarSettings />
           <EditName />

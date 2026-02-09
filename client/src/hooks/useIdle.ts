@@ -2,7 +2,7 @@ import React, { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast, type Id } from "react-toastify"
 
-const IDLE_TIME = 1000 * 5 * 60 // 5 minutes
+const IDLE_TIME = 1000 * 2 * 60 // 2 minutes
 const REDIRECT_TIME = 1000 * 30 // 30 seconds
 
 export const useIdle = (): void => {

@@ -9,7 +9,7 @@ interface AvatarProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 export const Avatar = ({ id, ...props }: AvatarProps) => {
 	const avatarUrl = React.useMemo(() => {
 		const avatar = createAvatar(bigSmile, { seed: id });
-		return `data:image/svg+xml;utf8,${encodeURIComponent(avatar.toString())}`;
+		return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(avatar.toString())}`;
 	}, [id]);
 
 	return (
