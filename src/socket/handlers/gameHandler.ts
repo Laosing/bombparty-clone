@@ -58,7 +58,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   socket.on("resetClient", resetClient);
   socket.on("leaveRoom", disconnect);
   socket.on("joinRoom", joinRoom);
-  socket.on("getRooms", getRooms);
+  socket.on("getRooms", joinLobby);
   socket.on("joinGame", joinGame);
   socket.on("joinGroup", joinGroup);
   socket.on("leaveGame", leaveGame);
@@ -95,6 +95,11 @@ export function registerGameHandlers(io: Server, socket: Socket) {
 
   // --- Room Logic ---
 
+  function joinLobby() {
+    socket.join("lobby");
+    getRooms();
+  }
+
   function joinRoom({
     roomId,
     isPrivate,
@@ -107,6 +112,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     avatarSeed: string;
   }) {
     _roomId = roomId;
+    socket.leave("lobby");
 
     initializeRoom();
     getRoom(isPrivate);
@@ -130,12 +136,9 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function getRooms() {
-    const clients = Array.from(io.sockets.adapter.sids.keys());
+    const clients = new Set(io.sockets.adapter.sids.keys());
     const gameRooms = Array.from(io.sockets.adapter.rooms).filter(
-      (entry: any) => {
-        const id = entry[0];
-        return !clients.includes(id);
-      }
+      ([id]) => !clients.has(id) && id !== "lobby"
     ) as [string, Set<string>][];
     const roomsWithPrivate = gameRooms.map(([room, players]) => [
       room,
@@ -144,7 +147,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
         isPrivate: Boolean(rooms.get(room)?.get("private")),
       },
     ]);
-    io.emit("getRooms", SuperJSON.serialize(roomsWithPrivate));
+    io.to("lobby").emit("getRooms", SuperJSON.serialize(roomsWithPrivate));
   }
 
   function getRoom(
@@ -181,8 +184,17 @@ export function registerGameHandlers(io: Server, socket: Socket) {
 
   function relayRoom() {
     const { room } = getRoom();
-    // Serialize handles maps and sets, which JSON.stringify doesn't
     io.sockets.in(_roomId).emit("getRoom", SuperJSON.serialize(room));
+  }
+
+  // Send only specific changed keys instead of the full room
+  function relayRoomPartial(...keys: (keyof Room)[]) {
+    const { room } = getRoom();
+    const partial = new Map<string, any>();
+    for (const key of keys) {
+      partial.set(key, room.get(key));
+    }
+    io.sockets.in(_roomId).emit("roomPatch", SuperJSON.serialize(partial));
   }
 
   // --- Game Logic ---
@@ -292,13 +304,19 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function leaveGame(userId: string) {
-    const { users } = getRoom();
+    const { users, running, currentGroup, timerConstructor, groups } = getRoom();
     const user = users.get(userId);
+    const wasCurrentTurn = running && user?.group === currentGroup;
     if (user) {
       users.set(userId, { ...user, inGame: false });
     }
 
     leaveGroup(userId, true);
+
+    if (wasCurrentTurn && groups.size > 0) {
+      switchGroup();
+      timerConstructor.reset();
+    }
 
     checkNoUsers();
 
@@ -342,7 +360,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
         }
         relayMessages();
       }
-      relayRoom();
+      relayRoomPartial("users");
     }
   }
 
@@ -354,7 +372,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     const player = users.get(userId);
     if (player) {
       users.set(userId, { ...player, avatar: newSeed });
-      relayRoom();
+      relayRoomPartial("users");
     }
   }
 
@@ -431,7 +449,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       setGroupText(groupId, "");
     }
     setGlobalInputText();
-    relayRoom();
+    relayRoomPartial("groups", "letterBlend", "letterBlendWord", "letterBlendCounter", "currentGroup");
   }
 
   function switchGroup() {
@@ -478,10 +496,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     const { room, timerConstructor, groups, currentGroup } = getRoom();
 
     checkNoUsers();
-    const leftGame = !Array.from(groups).find((entry: any) => {
-      const id = entry[0];
-      return id === currentGroup;
-    });
+    const leftGame = !groups.has(currentGroup);
     if (leftGame) {
       switchGroup();
       timerConstructor.reset();
@@ -490,7 +505,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     const seconds = timerConstructor.getTime();
     room.set("timer", seconds);
     if (seconds > 0) {
-      relayRoom();
+      relayRoomPartial("timer");
     }
   }
 
@@ -603,6 +618,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     timerConstructor.on("targetAchieved", onTimerFinish);
 
     timerConstructor.start(startTimer);
+    relayRoom();
   }
 
   function checkGameState() {
@@ -703,26 +719,18 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     incrementActiveTyper();
     checkIncrementRound(groups);
 
-    let currentIndex = groups.findIndex(([key]) => key === currentGroup);
-    if (currentIndex === groups.length - 1) currentIndex = 0;
+    // Find the current group's position, then search forward for the next alive group
+    const currentIndex = groups.findIndex(([key]) => key === currentGroup);
+    const len = groups.length;
 
-    let nextGroupId;
-    for (let i = currentIndex; i < groups.length; i++) {
-      const group = groups[i];
-      if (!group) continue;
-
-      const [id, val] = group;
-      if (val.lives <= 0 || id === currentGroup) continue;
-      nextGroupId = id;
-      break;
+    // Search from after current position, wrapping around
+    for (let offset = 1; offset < len; offset++) {
+      const [id, val] = groups[(currentIndex + offset) % len];
+      if (val.lives > 0) return id;
     }
 
-    if (!nextGroupId) {
-      const remainingGroups = groups.filter(([, val]) => val.lives > 0);
-      nextGroupId = remainingGroups[0]?.[0];
-    }
-
-    return nextGroupId;
+    // Fallback: return first alive group (single player case)
+    return groups.find(([, val]) => val.lives > 0)?.[0] || "";
   }
 
   function getRandomPlayer(collection: Map<string, Group>) {
@@ -771,7 +779,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       .set("letterBlendCounter", letterBlendCounter);
     if (data && userId) {
       io.sockets.in(_roomId).emit("setSettings", SuperJSON.serialize(settings));
-      relayRoom();
+      relayRoomPartial("settings");
 
       sendAdminMessage(userId, "changed the settings");
     }

@@ -1,4 +1,4 @@
-import React, { Activity } from "react";
+import React, { Activity, Suspense } from "react";
 
 import "./App.css";
 import "animate.css";
@@ -8,12 +8,14 @@ import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 
 import { useGameStore } from "hooks/useStore";
-import { Home } from "components/Home";
-import { ValidateRoom } from "components/ValidateRoom";
+import { useSingleTab } from "hooks/useSingleTab";
 import { InitializeSocket } from "components/InitializeSocket";
 import { ErrorBoundaryWrapper } from "components/ErrorFallback";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { isDevEnv } from "functions/session";
+
+const Home = React.lazy(() => import("components/Home").then((m) => ({ default: m.Home })));
+const ValidateRoom = React.lazy(() => import("components/ValidateRoom").then((m) => ({ default: m.ValidateRoom })));
 
 function App() {
 	return (
@@ -71,10 +73,22 @@ function Captcha({ children }: CaptchaProps) {
 
 const Router = () => {
 	const theme = useGameStore((store) => store.theme);
+	const blocked = useSingleTab();
 
 	React.useEffect(() => {
 		document.documentElement.setAttribute("data-theme", theme);
 	}, [theme]);
+
+	if (blocked) {
+		return (
+			<div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center">
+				<h1 className="text-3xl font-black">Multiple tabs detected</h1>
+				<p className="opacity-70 max-w-md">
+					It looks like you have the game open in another tab. Please close this tab and use the other one.
+				</p>
+			</div>
+		);
+	}
 
 	return (
 		<BrowserRouter>
@@ -84,12 +98,14 @@ const Router = () => {
 				theme={theme}
 				style={{ width: "100%", maxWidth: "600px" }}
 			/>
-			<Routes>
-				<Route path="/" element={<App />}>
-					<Route index element={<Home />} />
-					<Route path=":roomId" element={<ValidateRoom />}></Route>
-				</Route>
-			</Routes>
+			<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><span className="loading loading-ring loading-xl text-primary"></span></div>}>
+				<Routes>
+					<Route path="/" element={<App />}>
+						<Route index element={<Home />} />
+						<Route path=":roomId" element={<ValidateRoom />}></Route>
+					</Route>
+				</Routes>
+			</Suspense>
 		</BrowserRouter>
 	);
 };

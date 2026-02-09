@@ -47,20 +47,25 @@ export function GameSettings() {
 
   const [notification, setNotification] = useState(false)
 
-  const [timerValue, setTimerValue] = useState(timer)
-  const [livesValue, setLivesValue] = useState(lives)
-  const [lettersValue, setLettersValue] = useState(letterBlendCounter)
-  const [hardModeValue, setHardModeValue] = useState(hardMode)
-  const [hardModeToggle, setHardModeToggle] = useState(hardModeEnabled)
+  const [formValues, setFormValues] = useState({
+    timer,
+    lives,
+    letterBlendCounter,
+    hardMode,
+    hardModeEnabled,
+  })
 
   useEffect(() => {
     const triggerValidation = (val: string) => {
-      const deserializedVal = deserialize<Map<string, any>>(val)
-      setTimerValue(deserializedVal.get("timer"))
-      setLivesValue(deserializedVal.get("lives"))
-      setLettersValue(deserializedVal.get("letterBlendCounter"))
-      setHardModeToggle(deserializedVal.get("hardModeEnabled"))
-      setNotification(Boolean(deserializedVal))
+      const s = deserialize<Map<string, any>>(val)
+      setFormValues({
+        timer: s.get("timer"),
+        lives: s.get("lives"),
+        letterBlendCounter: s.get("letterBlendCounter"),
+        hardMode: s.get("hardMode"),
+        hardModeEnabled: s.get("hardModeEnabled"),
+      })
+      setNotification(true)
       setTimeout(() => setNotification(false), 500)
     }
 
@@ -70,12 +75,15 @@ export function GameSettings() {
     }
   }, [socket])
 
+  const updateField = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setFormValues((prev) => ({ ...prev, [field]: Number(e.target.value) }))
+
   return (
     <form onSubmit={submitForm} className="px-4 flex flex-col gap-1">
       <div className="form-control w-full">
         <label className="label py-1" htmlFor="timer">
           <span className="label-text">
-            Timer: <strong>{timerValue}s</strong>
+            Timer: <strong>{formValues.timer}s</strong>
           </span>
         </label>
         <input
@@ -85,9 +93,9 @@ export function GameSettings() {
           min={isDevEnv ? 1 : 10}
           max={59}
           step={1}
-          value={timerValue}
+          value={formValues.timer}
           disabled={disabled}
-          onChange={(e) => setTimerValue(Number(e.target.value))}
+          onChange={updateField("timer")}
           className="range range-primary range-xs"
         />
       </div>
@@ -95,7 +103,7 @@ export function GameSettings() {
       <div className="form-control w-full">
         <label className="label py-1" htmlFor="lives">
           <span className="label-text">
-            Lives: <strong>{livesValue}</strong>
+            Lives: <strong>{formValues.lives}</strong>
           </span>
         </label>
         <input
@@ -105,9 +113,9 @@ export function GameSettings() {
           min={1}
           max={10}
           step={1}
-          value={livesValue}
+          value={formValues.lives}
           disabled={disabled}
-          onChange={(e) => setLivesValue(Number(e.target.value))}
+          onChange={updateField("lives")}
           className="range range-primary range-xs"
         />
       </div>
@@ -115,7 +123,7 @@ export function GameSettings() {
       <div className="form-control w-full">
         <label className="label py-1" htmlFor="letterBlendCounter">
           <span className="label-text">
-            Change letters after <strong>{lettersValue}</strong> turns
+            Change letters after <strong>{formValues.letterBlendCounter}</strong> turns
           </span>
         </label>
         <input
@@ -125,9 +133,9 @@ export function GameSettings() {
           min={1}
           max={10}
           step={1}
-          value={lettersValue}
+          value={formValues.letterBlendCounter}
           disabled={disabled}
-          onChange={(e) => setLettersValue(Number(e.target.value))}
+          onChange={updateField("letterBlendCounter")}
           className="range range-primary range-xs"
         />
       </div>
@@ -140,16 +148,16 @@ export function GameSettings() {
           <input
             type="checkbox"
             className="toggle toggle-primary toggle-sm"
-            checked={Boolean(hardModeToggle)}
-            onChange={() => setHardModeToggle((p: boolean) => !p)}
+            checked={Boolean(formValues.hardModeEnabled)}
+            onChange={() => setFormValues((prev) => ({ ...prev, hardModeEnabled: !prev.hardModeEnabled }))}
             name="hardModeEnabled"
             id="hardModeEnabled"
             disabled={disabled}
           />
           <span
-            className={`label-text transition-opacity ${hardModeToggle ? "opacity-100" : "opacity-50"}`}
+            className={`label-text transition-opacity ${formValues.hardModeEnabled ? "opacity-100" : "opacity-50"}`}
           >
-            Hard mode after <strong>{hardModeValue}</strong> rounds{" "}
+            Hard mode after <strong>{formValues.hardMode}</strong> rounds{" "}
             <HardmodeTooltip />
           </span>
         </label>
@@ -160,10 +168,10 @@ export function GameSettings() {
           min={1}
           max={10}
           step={1}
-          value={hardModeValue}
-          disabled={disabled || !hardModeToggle}
-          onChange={(e) => setHardModeValue(Number(e.target.value))}
-          className={`range range-primary range-xs transition-opacity ${hardModeToggle ? "opacity-100" : "opacity-30"}`}
+          value={formValues.hardMode}
+          disabled={disabled || !formValues.hardModeEnabled}
+          onChange={updateField("hardMode")}
+          className={`range range-primary range-xs transition-opacity ${formValues.hardModeEnabled ? "opacity-100" : "opacity-30"}`}
         />
       </div>
 

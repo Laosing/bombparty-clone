@@ -24,11 +24,24 @@ export function InitializeRoom() {
 
 	useEffect(() => {
 		const getRoom = (val: string) => setRoom(deserialize(val));
+		const patchRoom = (val: string) => {
+			const patch = deserialize<Map<string, any>>(val);
+			setRoom((prev) => {
+				if (!prev) return prev;
+				const next = new Map(prev);
+				for (const [key, value] of patch) {
+					next.set(key, value);
+				}
+				return next;
+			});
+		};
 
 		socket.emit("joinRoom", { roomId, isPrivate, name, avatarSeed });
 		socket.on("getRoom", getRoom);
+		socket.on("roomPatch", patchRoom);
 		return () => {
 			socket.off("getRoom", getRoom);
+			socket.off("roomPatch", patchRoom);
 		};
 	}, [socket, roomId, isPrivate, name, avatarSeed]);
 
