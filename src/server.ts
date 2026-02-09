@@ -13,13 +13,17 @@ const clientBuildPath = path.join(projectRoot, "client/build");
 
 const port = parseInt(config.port as string) || 3000;
 
+const allowedOrigins = config.nodeEnv === "production"
+    ? [config.corsOrigin].filter(Boolean) as string[]
+    : "*";
+
 const io = new Server({
     cors: {
-        origin: "*",
+        origin: allowedOrigins,
         methods: ["GET", "POST"],
     },
     pingTimeout: 60000,
-    maxHttpBufferSize: 1e8,
+    maxHttpBufferSize: 1e6, // 1 MB
 });
 
 const engine = new Engine({

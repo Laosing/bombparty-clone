@@ -17,11 +17,17 @@ function Messages() {
 	const { socket } = useSocket();
 	const ref = useRef<HTMLDivElement>(null);
 
-	const [messages, setMessages] = useState<Set<Message>>(new Set());
+	const MAX_MESSAGES = 100;
+	const [messages, setMessages] = useState<Message[]>([]);
 	const [notify, setNotify] = useState(false);
 
 	useEffect(() => {
-		const updateMessages = (val: string) => setMessages(deserialize(val));
+		const updateMessages = (val: string) => {
+			const parsed = [...(deserialize(val) as Set<Message>)]
+				.sort((a, b) => a.time - b.time)
+				.slice(-MAX_MESSAGES);
+			setMessages(parsed);
+		};
 		socket.emit("getMessages");
 		socket.on("messages", updateMessages);
 		return () => {
@@ -44,9 +50,7 @@ function Messages() {
 	return (
 		<div className="overflow-y-auto flex-grow min-h-[7em]" ref={ref}>
 			<div className="flex flex-col mt-auto">
-				{[...messages]
-					.sort((a, b) => a.time - b.time)
-					.map((message, index, array) => (
+				{messages.map((message, index, array) => (
 						<div
 							key={message.id}
 							className={clsx(
@@ -85,26 +89,42 @@ function Messages() {
 	);
 }
 
+const MESSAGE_COOLDOWN = 1000;
+
 const MessageInput = () => {
 	const inputRef = useRef<HTMLInputElement>(null);
+	const lastSentRef = useRef(0);
+	const [onCooldown, setOnCooldown] = useState(false);
 	const { socket } = useSocket();
 
 	const submitForm = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		const now = Date.now();
+		if (now - lastSentRef.current < MESSAGE_COOLDOWN) return;
 		const value = inputRef.current?.value.trim();
 		if (value) {
 			socket.emit("message", value);
+			lastSentRef.current = now;
+			setOnCooldown(true);
+			setTimeout(() => setOnCooldown(false), MESSAGE_COOLDOWN);
 		}
 		(e.currentTarget as HTMLFormElement).reset();
 	};
 
 	return (
-		<form onSubmit={submitForm} className="mt-2">
+		<form onSubmit={submitForm} className="mt-2 flex gap-1">
 			<input
 				ref={inputRef}
 				placeholder="Type your message"
-				className="input input-bordered input-sm w-full"
+				className="input input-bordered input-sm flex-1"
 			/>
+			<button
+				type="submit"
+				disabled={onCooldown}
+				className="btn btn-primary btn-sm"
+			>
+				Send
+			</button>
 		</form>
 	);
 };

@@ -6,9 +6,14 @@ export const useHowl = (src: string | string[], type: "effect" | "music" = "effe
   const soundMusicSettings = useSoundStore((state) => state.music)
   const soundEffectSettings = useSoundStore((state) => state.soundEffects)
 
+  const shouldMute = type === "music" ? !soundMusicSettings : !soundEffectSettings
+
   const json = JSON.stringify({ src, ...props })
   const sound = React.useMemo(() => {
-    return new Howl(JSON.parse(json))
+    const howl = new Howl(JSON.parse(json))
+    howl.mute(shouldMute)
+    return howl
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [json])
 
   useEffect(() => {
@@ -17,8 +22,9 @@ export const useHowl = (src: string | string[], type: "effect" | "music" = "effe
     }
   }, [sound])
 
-  if (type === "music") setTimeout(() => sound.mute(!soundMusicSettings), 0)
-  if (type === "effect") setTimeout(() => sound.mute(!soundEffectSettings), 0)
+  useEffect(() => {
+    sound.mute(shouldMute)
+  }, [sound, shouldMute])
 
   return [sound]
 }

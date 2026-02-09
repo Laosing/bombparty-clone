@@ -1,4 +1,4 @@
-import { useEffect, useState, useDeferredValue } from "react";
+import { useEffect, useState, useDeferredValue, useRef, useCallback } from "react";
 import clsx from "clsx";
 import { LETTER_BONUS } from "constants/constants";
 import { useSocket } from "hooks/useSocket";
@@ -32,10 +32,22 @@ export function PlayerInput() {
 		e.currentTarget.reset();
 	};
 
+	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const emitText = useCallback((val: string) => {
+		clearTimeout(debounceRef.current);
+		debounceRef.current = setTimeout(() => {
+			socket.emit("setGlobalInputText", val);
+		}, 50);
+	}, [socket]);
+
+	useEffect(() => {
+		return () => clearTimeout(debounceRef.current);
+	}, []);
+
 	const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const val = e.target.value.toLowerCase();
 		setValue(val);
-		socket.emit("setGlobalInputText", val);
+		emitText(val);
 	};
 
 	const color =

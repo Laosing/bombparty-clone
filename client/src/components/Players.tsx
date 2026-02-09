@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import clsx from "clsx";
 import soundBoom from "audio/boom.mp3";
 import soundValid from "audio/valid.mp3";
@@ -48,13 +48,30 @@ export function Players() {
 		}
 	});
 
+	const soundRefs = useRef({
+		gainedBonusLetter,
+		gainedHeartControls,
+		boomControls,
+		userJoinedControls,
+		userLeftControls,
+		winnerControls,
+	});
+	soundRefs.current = {
+		gainedBonusLetter,
+		gainedHeartControls,
+		boomControls,
+		userJoinedControls,
+		userLeftControls,
+		winnerControls,
+	};
+
 	useEffect(() => {
-		const triggerGainedBonusLetter = () => gainedBonusLetter.play();
-		const triggerGainedHeart = () => gainedHeartControls.play();
-		const triggerBoom = () => boomControls.play();
-		const triggerUserJoined = () => userJoinedControls.play();
-		const userLeft = () => userLeftControls.play();
-		const triggerWinner = () => winnerControls.play();
+		const triggerGainedBonusLetter = () => soundRefs.current.gainedBonusLetter.play();
+		const triggerGainedHeart = () => soundRefs.current.gainedHeartControls.play();
+		const triggerBoom = () => soundRefs.current.boomControls.play();
+		const triggerUserJoined = () => soundRefs.current.userJoinedControls.play();
+		const userLeft = () => soundRefs.current.userLeftControls.play();
+		const triggerWinner = () => soundRefs.current.winnerControls.play();
 
 		socket.on("bonusLetter", triggerGainedBonusLetter);
 		socket.on("gainedHeart", triggerGainedHeart);
@@ -70,15 +87,7 @@ export function Players() {
 			socket.off("winner", triggerWinner);
 			socket.off("boom", triggerBoom);
 		};
-	}, [
-		socket,
-		gainedBonusLetter,
-		gainedHeartControls,
-		boomControls,
-		userJoinedControls,
-		userLeftControls,
-		winnerControls,
-	]);
+	}, [socket]);
 
 	const textColor =
 		validation.isValid === false

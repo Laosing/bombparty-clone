@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { deserialize } from "functions/deserialize";
 import { useInterval } from "hooks/useInterval";
@@ -32,14 +32,17 @@ export function InitializeRoom() {
 		};
 	}, [socket, roomId, isPrivate, name, avatarSeed]);
 
+	const MAX_RETRIES = 3;
+	const retryCount = useRef(0);
 	const isLoadingStuck = !room || !room.get("users")?.has(userId);
 	useInterval(
 		() => {
-			if (isLoadingStuck) {
+			if (isLoadingStuck && retryCount.current < MAX_RETRIES) {
+				retryCount.current += 1;
 				window.location.reload();
 			}
 		},
-		isLoadingStuck ? 5000 : null,
+		isLoadingStuck ? 5000 * (retryCount.current + 1) : null,
 	);
 
 	if (!room) {

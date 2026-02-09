@@ -24,9 +24,27 @@ const getRandomElement = <T>(arr: T[]) =>
 const getRandomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
+// Simple per-socket rate limiter
+function createRateLimiter(maxPerSecond: number) {
+  let tokens = maxPerSecond;
+  let lastRefill = Date.now();
+  return () => {
+    const now = Date.now();
+    tokens += ((now - lastRefill) / 1000) * maxPerSecond;
+    if (tokens > maxPerSecond) tokens = maxPerSecond;
+    lastRefill = now;
+    if (tokens < 1) return false;
+    tokens -= 1;
+    return true;
+  };
+}
+
+const MAX_ROOMS = 50;
+
 export function registerGameHandlers(io: Server, socket: Socket) {
   let _firstRound = true;
   let _roomId: string;
+  const rateLimiter = createRateLimiter(20); // 20 events/sec per socket
 
   const log = pino({
     mixin() {
@@ -44,7 +62,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   socket.on("joinGame", joinGame);
   socket.on("joinGroup", joinGroup);
   socket.on("leaveGame", leaveGame);
-  socket.on("kickPlayer", leaveGame);
+  socket.on("kickPlayer", kickPlayer);
   socket.on("setSettings", setSettings);
   socket.on("checkWord", checkWord);
   socket.on("setGlobalInputText", setGlobalInputText);
@@ -64,6 +82,15 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     if (eventName !== "setGlobalInputText") {
       log.info({ eventName, ...args });
     }
+  });
+
+  // Rate limit all incoming events
+  socket.use(([event], next) => {
+    if (!rateLimiter()) {
+      log.warn(`Rate limited event: ${event}`);
+      return next(new Error("Rate limit exceeded"));
+    }
+    next();
   });
 
   // --- Room Logic ---
@@ -94,6 +121,10 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   function initializeRoom() {
     const room = rooms.get(_roomId);
     if (!room) {
+      if (rooms.size >= MAX_ROOMS) {
+        log.warn("Max rooms limit reached");
+        return;
+      }
       rooms.set(_roomId, new Map());
     }
   }
@@ -232,7 +263,35 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     });
   }
 
-  function leaveGame(userId: string, kickerId?: string) {
+  function kickPlayer(userId: string, kickerId?: string) {
+    if (!kickerId || kickerId !== socket.handshake.auth.userId) return;
+    const { users } = getRoom();
+    const kickerUser = users.get(kickerId);
+    const user = users.get(userId);
+    if (!user || !kickerUser) return;
+
+    // Remove from game and room
+    leaveGame(userId);
+    users.delete(userId);
+
+    // Force the kicked player's socket to leave the room
+    const kickedSocket = [...io.sockets.sockets.values()].find(
+      (s) => s.handshake.auth.userId === userId
+    );
+    if (kickedSocket) {
+      kickedSocket.leave(_roomId);
+      kickedSocket.emit("resetClient");
+    }
+
+    createMessage(
+      admin as User,
+      `${kickerUser.name} kicked ${user.name} from the room`
+    );
+    io.sockets.in(_roomId).emit("userLeft");
+    relayRoom();
+  }
+
+  function leaveGame(userId: string) {
     const { users } = getRoom();
     const user = users.get(userId);
     if (user) {
@@ -244,18 +303,6 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     checkNoUsers();
 
     relayRoom();
-
-    if (kickerId && user) {
-      const kickerUser = users.get(kickerId);
-      if (kickerUser) {
-        createMessage(
-          admin as User,
-          `${kickerUser.name} kicked ${user.name} from the game`
-        );
-      }
-    } else {
-      sendAdminMessage(userId, "left the game");
-    }
   }
 
   function setLetterBlend() {
@@ -270,7 +317,9 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function setGlobalInputText(text = "") {
-    io.sockets.in(_roomId).emit("setGlobalInputText", text);
+    if (typeof text !== "string") return;
+    const sanitized = text.slice(0, 100);
+    io.sockets.in(_roomId).emit("setGlobalInputText", sanitized);
   }
 
   function resetClient() {
@@ -278,15 +327,19 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function updateName(value: string, userId: string) {
-    if (!value) return;
+    if (!value || typeof value !== "string") return;
+    const sanitized = value.trim().slice(0, 30);
+    if (!sanitized) return;
+    // Only allow updating your own name
+    if (userId !== socket.handshake.auth.userId) return;
     const { users, messages, room } = getRoom();
     const player = users.get(userId);
     if (player) {
-      users.set(userId, { ...player, name: value });
+      users.set(userId, { ...player, name: sanitized });
       if (messages.size) {
         const updateMessages = [...messages].map((m) => ({
           ...m,
-          user: { ...m.user, name: m.user.id === userId ? value : m.user.name },
+          user: { ...m.user, name: m.user.id === userId ? sanitized : m.user.name },
         }));
         room.set("messages", new Set(updateMessages));
         relayMessages();
@@ -296,6 +349,9 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function updateAvatar(userId: string, newSeed: string) {
+    if (typeof newSeed !== "string" || newSeed.length > 50) return;
+    // Only allow updating your own avatar
+    if (userId !== socket.handshake.auth.userId) return;
     const { users } = getRoom();
     const player = users.get(userId);
     if (player) {
@@ -344,6 +400,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function checkWord(value: string, groupId: string) {
+    if (typeof value !== "string" || value.length > 100) return;
     const { letterBlend, words, currentGroup, timerConstructor } = getRoom();
     const isBlend = value.includes(letterBlend.toLowerCase());
     const isDictionary = dictionaryService.checkWord(value);
@@ -684,10 +741,12 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   function initializeUser(name: string, avatarSeed: string) {
     const { userId } = socket.handshake.auth;
     const { users } = getRoom();
+    const safeName = typeof name === "string" ? name.trim().slice(0, 30) : "Anonymous";
+    const safeSeed = typeof avatarSeed === "string" ? avatarSeed.slice(0, 50) : "";
     users.set(userId, {
       id: userId,
-      name,
-      avatar: avatarSeed,
+      name: safeName || "Anonymous",
+      avatar: safeSeed,
       inGame: false,
       group: "",
     });
@@ -729,17 +788,26 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     }
   }
 
+  let _lastMessageTime = 0;
+  const MESSAGE_COOLDOWN = 1000; // 1 message per second
+
   function handleUserMessage(value: string) {
+    if (typeof value !== "string" || !value.trim()) return;
+    const now = Date.now();
+    if (now - _lastMessageTime < MESSAGE_COOLDOWN) return;
+    _lastMessageTime = now;
+    const sanitized = value.trim().slice(0, 500);
     const { userId } = socket.handshake.auth;
     const { users } = getRoom();
     const user = users.get(userId);
     if (user) {
-      createMessage(user, value);
+      createMessage(user, sanitized);
     }
   }
 
   function createMessage(user: User, value: string) {
-    const { messages } = getRoom();
+    const { messages, room } = getRoom();
+    const MAX_MESSAGES = 100;
     const message: Message = {
       id: nanoid(),
       user,
@@ -747,6 +815,10 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       time: Date.now(),
     };
     messages.add(message);
+    if (messages.size > MAX_MESSAGES) {
+      const trimmed = [...messages].slice(-MAX_MESSAGES);
+      room.set("messages", new Set(trimmed));
+    }
     relayMessages();
   }
 
