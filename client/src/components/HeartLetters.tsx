@@ -3,6 +3,8 @@ import { useRoom } from "hooks/useRoom"
 import type { Group, User } from "types/index"
 import clsx from "clsx"
 
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("")
+
 export function HeartLetters() {
   const { userId } = useSocket()
   const { room } = useRoom()
@@ -14,9 +16,8 @@ export function HeartLetters() {
   const user = users.get(userId || "")
   const groupId = user?.group
   const group = groups.get(groupId || "")
-  const userLetters = [...(group?.letters || [])]
-  const userBonusLetters = [...(group?.bonusLetters || [])]
-  const alphabet = "abcdefghijklmnopqrstuvwxyz"
+  const userLetters = group?.letters as Set<string> | undefined
+  const userBonusLetters = group?.bonusLetters as Set<string> | undefined
 
   if (!running) {
     return null
@@ -24,14 +25,14 @@ export function HeartLetters() {
 
   return (
     <div className="flex flex-wrap justify-center gap-1 max-w-[480px] mx-auto py-2">
-      {[...alphabet].map((letter) => (
+      {ALPHABET.map((letter) => (
         <span
           key={letter}
           className={clsx(
             "badge badge-sm w-8 h-8 font-mono font-bold border-2 transition-all",
-            userBonusLetters.includes(letter)
+            userBonusLetters?.has(letter)
               ? "badge-warning border-warning scale-110 shadow-sm"
-              : userLetters.includes(letter)
+              : userLetters?.has(letter)
                 ? "badge-neutral border-neutral"
                 : "badge-ghost opacity-50",
           )}

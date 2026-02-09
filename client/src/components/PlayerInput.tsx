@@ -101,6 +101,7 @@ export function PlayerInput() {
 				autoFocus
 				{...inputProps}
 				type="text"
+				maxLength={40}
 			/>
 			{deferredValue && (
 				<span

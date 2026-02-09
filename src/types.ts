@@ -35,7 +35,7 @@ export interface Settings {
 }
 
 export interface Room {
-  messages: Set<Message>;
+  messages: Message[];
   users: Map<string, User>;
   groups: Map<string, Group>;
   words: Set<string>;
@@ -58,7 +58,7 @@ export interface Room {
 
 // Helper type for Room properties
 export interface RoomProps {
-  messages: Set<Message>;
+  messages: Message[];
   users: Map<string, User>;
   groups: Map<string, Group>;
   words: Set<string>;

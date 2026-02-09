@@ -20,7 +20,7 @@ export function createRoom(roomId: string, isPrivate: boolean): RoomProps & { ro
     room.get(prop) || room.set(prop, initialValue).get(prop);
 
   const props: RoomProps = {
-    messages: setProp("messages", new Set<Message>()),
+    messages: setProp("messages", [] as Message[]),
     users: setProp("users", new Map<string, User>()),
     groups: setProp("groups", new Map<string, Group>()),
     words: setProp("words", new Set<string>()),

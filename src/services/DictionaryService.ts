@@ -1,29 +1,22 @@
-import { Database } from "bun:sqlite";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export class DictionaryService {
-  private db: Database;
+  private words: Set<string>;
+  private wordList: string[];
 
   constructor() {
-    // Database path relative to where the process runs (root)
-    this.db = new Database("./data/dictionary.db", { readonly: true });
-    this.db.exec("PRAGMA journal_mode = WAL;");
+    const content = readFileSync(join(process.cwd(), "data/dictionary.txt"), "utf-8");
+    this.wordList = content.split("\n").filter(Boolean);
+    this.words = new Set(this.wordList);
   }
 
   getRandomWord(): string | undefined {
-    // Bun's sqlite get() returns the first result directly
-    const result = this.db
-      .prepare(
-        "SELECT * FROM English WHERE ROWID > (ABS(RANDOM()) % (SELECT max(ROWID) FROM English)) LIMIT 1;"
-      )
-      .get() as { word: string } | null;
-    return result?.word;
+    return this.wordList[Math.floor(Math.random() * this.wordList.length)];
   }
 
   checkWord(word: string): boolean {
-    const result = this.db
-      .prepare("SELECT * FROM English WHERE word = ?")
-      .get(word) as { word: string } | null;
-    return Boolean(result?.word);
+    return this.words.has(word);
   }
 }
 

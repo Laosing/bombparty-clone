@@ -10,7 +10,7 @@ import { getRandomLettersFn } from "../../shared/utils.js";
 // Global state for rooms (migrated from game.ts)
 export const rooms = new Map<string, Map<keyof Room, any>>();
 
-const ALPHABET = "abcdefghijklmnopqrstuvwxyz";
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
 const LETTER_BONUS = 10;
 
 const admin: { name: string } = {
@@ -156,7 +156,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       room.get(prop) || room.set(prop, initialValue).get(prop);
 
     const props: RoomProps = {
-      messages: setProp("messages", new Set<Message>()),
+      messages: setProp("messages", [] as Message[]),
       users: setProp("users", new Map<string, User>()),
       groups: setProp("groups", new Map<string, Group>()),
       words: setProp("words", new Set<string>()),
@@ -332,16 +332,14 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     if (!sanitized) return;
     // Only allow updating your own name
     if (userId !== socket.handshake.auth.userId) return;
-    const { users, messages, room } = getRoom();
+    const { users, messages } = getRoom();
     const player = users.get(userId);
     if (player) {
       users.set(userId, { ...player, name: sanitized });
-      if (messages.size) {
-        const updateMessages = [...messages].map((m) => ({
-          ...m,
-          user: { ...m.user, name: m.user.id === userId ? sanitized : m.user.name },
-        }));
-        room.set("messages", new Set(updateMessages));
+      if (messages.length) {
+        for (const m of messages) {
+          if (m.user.id === userId) m.user.name = sanitized;
+        }
         relayMessages();
       }
       relayRoom();
@@ -365,11 +363,11 @@ export function registerGameHandlers(io: Server, socket: Socket) {
     const group = groups.get(groupId);
     if (!group) return;
 
-    const letters = new Set([...group.letters, ...value.split("")]);
+    const letters = new Set([...(group.letters as Set<string>), ...value.split("")]);
     const bonusletter = getBonusLetters(value, letters);
-    const newLetters = new Set([...letters, ...bonusletter]);
+    if (bonusletter) letters.add(bonusletter);
 
-    if (newLetters.size >= 26) {
+    if (letters.size >= 26) {
       groups.set(groupId, {
         ...group,
         lives: Number(group.lives) >= 10 ? 10 : Number(group.lives) + 1,
@@ -378,19 +376,20 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       });
       io.sockets.in(_roomId).emit("gainedHeart", groupId);
     } else {
+      const bonusLetters = new Set(group.bonusLetters as Set<string>);
+      if (bonusletter) bonusLetters.add(bonusletter);
       groups.set(groupId, {
         ...group,
-        letters: newLetters,
-        bonusLetters: new Set([...group.bonusLetters, ...bonusletter]),
+        letters,
+        bonusLetters,
       });
     }
   }
 
   function getBonusLetters(value: string, letters: Set<string>) {
     if (value.length > LETTER_BONUS) {
-      const lettersArray = [...letters];
-      const remainingLetters = ALPHABET.split("").filter(
-        (l) => !lettersArray.includes(l)
+      const remainingLetters = ALPHABET.filter(
+        (l) => !letters.has(l)
       );
       const randomLetter = getRandomElement(remainingLetters);
       io.sockets.in(_roomId).emit("bonusLetter", randomLetter);
@@ -806,7 +805,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
   }
 
   function createMessage(user: User, value: string) {
-    const { messages, room } = getRoom();
+    const { messages } = getRoom();
     const MAX_MESSAGES = 100;
     const message: Message = {
       id: nanoid(),
@@ -814,10 +813,9 @@ export function registerGameHandlers(io: Server, socket: Socket) {
       value,
       time: Date.now(),
     };
-    messages.add(message);
-    if (messages.size > MAX_MESSAGES) {
-      const trimmed = [...messages].slice(-MAX_MESSAGES);
-      room.set("messages", new Set(trimmed));
+    messages.push(message);
+    if (messages.length > MAX_MESSAGES) {
+      messages.splice(0, messages.length - MAX_MESSAGES);
     }
     relayMessages();
   }

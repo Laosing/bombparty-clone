@@ -1,21 +1,24 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSocket } from "./useSocket"
 
 export const useEventTimeout = <T>(event: string, initialValue: T, timeout: number = 300): [T] => {
   const { socket } = useSocket()
   const [state, setState] = useState<T>(initialValue)
+  const initialValueRef = useRef(initialValue)
+  initialValueRef.current = initialValue
 
   useEffect(() => {
     const triggerEvent = (data: T) => {
       setState(data)
-      setTimeout(() => setState(initialValue), timeout)
+      setTimeout(() => setState(initialValueRef.current), timeout)
     }
 
     socket.on(event, triggerEvent)
     return () => {
       socket.off(event, triggerEvent)
     }
-  }, [event, initialValue, socket, timeout])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, socket, timeout])
 
   return [state]
 }

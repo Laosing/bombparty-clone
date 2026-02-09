@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { deserialize } from "functions/deserialize";
 import { useGameStore } from "hooks/useStore";
@@ -26,7 +26,7 @@ export const Rooms = () => {
 		};
 	}, [socket, userId]);
 
-	const gameRooms = [...rooms].filter(([, data]) => !data.isPrivate);
+	const gameRooms = useMemo(() => [...rooms].filter(([, data]) => !data.isPrivate), [rooms]);
 
 	return (
 		<div className="w-full">
