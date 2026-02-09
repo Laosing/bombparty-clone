@@ -24,6 +24,7 @@ export function Game() {
 	const { socket, userId } = useSocket();
 	const { room } = useRoom();
 	const musicVersion = useSoundStore((store) => store.musicVersion);
+	const musicEnabled = useSoundStore((store) => store.music);
 	const name = useGameStore((state) => state.name);
 	const theme = useGameStore((state) => state.theme);
 
@@ -74,10 +75,12 @@ export function Game() {
 			lobbyMusic.stop();
 		} else {
 			resetBoom();
-			const sound = lobbyMusic.play();
-			lobbyMusic.fade(0, 1, 2000, sound);
+			if (musicEnabled) {
+				const sound = lobbyMusic.play();
+				lobbyMusic.fade(0, 1, 2000, sound);
+			}
 		}
-	}, [running, lobbyMusic, resetBoom, isCountDown]);
+	}, [running, lobbyMusic, resetBoom, isCountDown, musicEnabled]);
 
 	return (
 		<div className="w-full max-w-2xl mx-auto flex flex-col items-center">

@@ -6,7 +6,7 @@ import clsx from "clsx";
 
 export function MessagesWrapper() {
 	return (
-		<div className="p-3 flex flex-col flex-grow min-h-0">
+		<div className="p-3 flex flex-col flex-grow min-h-0 overflow-hidden">
 			<Messages />
 			<MessageInput />
 		</div>
