@@ -37,7 +37,7 @@ export function Room() {
   return (
     <div
       className={clsx(
-        "flex flex-col lg:flex-row min-h-screen bg-base-100",
+        "flex flex-col lg:flex-row min-h-screen lg:h-screen bg-base-100",
         theme,
       )}
     >
@@ -52,6 +52,14 @@ export function Room() {
         </button>
       )}
 
+      {/* Chat Column */}
+      <aside className="w-full lg:w-72 flex flex-col bg-base-200 border-r border-base-300 shrink-0 lg:h-screen lg:order-first order-last">
+        <div className="divider my-1 text-[0.55rem] opacity-50 tracking-widest uppercase">
+          Chat
+        </div>
+        <MessagesWrapper />
+      </aside>
+
       {/* Main Game Area */}
       <main className="flex-1 relative flex flex-col min-h-0 lg:overflow-y-auto">
         <GithubLink />
@@ -60,8 +68,8 @@ export function Room() {
         </div>
       </main>
 
-      {/* Sidebar Area */}
-      <aside className="w-full lg:w-96 lg:max-h-screen flex flex-col bg-base-200 border-l border-base-300 shrink-0">
+      {/* Sidebar: Settings */}
+      <aside className="w-full lg:w-80 flex flex-col bg-base-200 border-l border-base-300 shrink-0 lg:overflow-y-auto overflow-x-hidden">
         <div className="px-4">
           <AvatarSettings />
           <EditName />
@@ -79,22 +87,15 @@ export function Room() {
           </div>
         </div>
 
-        <div className="flex flex-col flex-grow min-h-0 overflow-y-auto">
-          <div className="divider my-1 text-[0.55rem] opacity-50 tracking-widest uppercase">
-            Audio
-          </div>
-          <AudioSettings />
-
-          <div className="divider my-1 text-[0.55rem] opacity-50 tracking-widest uppercase">
-            Game Settings
-          </div>
-          <GameSettings />
-
-          <div className="divider my-1 text-[0.55rem] opacity-50 tracking-widest uppercase">
-            Chat
-          </div>
-          <MessagesWrapper />
+        <div className="divider my-1 text-[0.55rem] opacity-50 tracking-widest uppercase">
+          Audio
         </div>
+        <AudioSettings />
+
+        <div className="divider my-1 text-[0.55rem] opacity-50 tracking-widest uppercase">
+          Game Settings
+        </div>
+        <GameSettings />
       </aside>
     </div>
   )
