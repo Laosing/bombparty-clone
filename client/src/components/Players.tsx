@@ -109,7 +109,9 @@ export function Players() {
 
   return (
     <div>
-      {!running && <h5 className="text-xl font-bold mb-4">Players</h5>}
+      {!running && (
+        <h5 className="text-xl font-bold mb-4 text-center">Players</h5>
+      )}
       <div className="m-auto relative px-4 max-w-[30rem]">
         <Rounds />
 

@@ -15,8 +15,8 @@ export function InitializeRoom() {
 	const { roomId } = useParams<{ roomId: string }>();
 	const [room, setRoom] = useState<Map<string, any> | undefined>();
 
-	const name = useGameStore((state) => state.name);
-	const avatarSeed = useGameStore((state) => state.avatarSeed);
+	const nameRef = useRef(useGameStore.getState().name);
+	const avatarSeedRef = useRef(useGameStore.getState().avatarSeed);
 
 	const location = useLocation();
 	const isPrivate = (location.state as { isPrivate?: boolean } | null)
@@ -36,14 +36,14 @@ export function InitializeRoom() {
 			});
 		};
 
-		socket.emit("joinRoom", { roomId, isPrivate, name, avatarSeed });
+		socket.emit("joinRoom", { roomId, isPrivate, name: nameRef.current, avatarSeed: avatarSeedRef.current });
 		socket.on("getRoom", getRoom);
 		socket.on("roomPatch", patchRoom);
 		return () => {
 			socket.off("getRoom", getRoom);
 			socket.off("roomPatch", patchRoom);
 		};
-	}, [socket, roomId, isPrivate, name, avatarSeed]);
+	}, [socket, roomId, isPrivate]);
 
 	const MAX_RETRIES = 3;
 	const retryCount = useRef(0);
